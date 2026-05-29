@@ -1,0 +1,33 @@
+{
+  "operation": "FFFFFFFF",
+  "ownerFlg": false,
+  "a2wName": "Warmtepomp",
+  "status": {
+    "serviceType": "STD_ADP-TAW1",
+    "operationMode": 2,
+    "direction": 1,
+    "quietMode": 0,
+    "powerful": 0,
+    "forceDHW": 0,
+    "forceHeater": 0,
+    "tank": 1,
+    "pumpDuty": 0,
+    "waterPressure": 1.32,
+    "deiceStatus": 0,
+    "specialStatus": 0,
+    "outdoorNow": 31,
+    "holidayTimer": 0,
+    "modelSeriesSelection": 4,
+    "zoneStatus": [
+      {"zoneId": 1, "zoneName": "Boven", "zoneType": 0, "zoneSensor": 0,
+       "operationStatus": 0, "temperatureNow": 14,
+       "heatMin": -5, "heatMax": 5, "coolMin": -5, "coolMax": 5,
+       "heatSet": -5, "coolSet": 0},
+      {"zoneId": 2, "zoneName": "Beneden", "zoneType": 0, "zoneSensor": 2,
+       "operationStatus": 1, "temperatureNow": 24,
+       "heatMin": 10, "heatMax": 30, "coolMin": 18, "coolMax": 35,
+       "heatSet": 20, "coolSet": 22}
+    ],
+    "tankStatus": {"operationStatus": 1, "temperatureNow": 46, "heatMin": 40, "heatMax": 65, "heatSet": 52}
+  }
+}
