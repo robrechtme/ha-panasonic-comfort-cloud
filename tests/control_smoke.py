@@ -42,7 +42,9 @@ async def write_zone(session, c, guid, zone_id, key, value):
 def zone_setpoint(device, zone_id):
     z = next(zz for zz in device.zones if zz.zone_id == zone_id)
     cooling = device.operation_mode is OperationMode.COOL
-    return (z.cool_setpoint if cooling else z.heat_setpoint), ("coolSet" if cooling else "heatSet"), z.name
+    setpoint = z.cool_setpoint if cooling else z.heat_setpoint
+    key = "coolSet" if cooling else "heatSet"
+    return setpoint, key, z.name
 
 
 async def main() -> None:
