@@ -33,6 +33,13 @@
     },
     "climate": {
       "zone": {"name": "{zone}"}
+    },
+    "number": {
+      "zone_offset": {"name": "{zone} offset"}
+    },
+    "switch": {
+      "zone_power": {"name": "{zone}"},
+      "force_dhw": {"name": "Force DHW"}
     }
   }
 }
