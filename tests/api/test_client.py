@@ -201,6 +201,52 @@ async def test_get_status_raises_apierror_on_error_envelope(session):
             await client.get_status("HP1")
 
 
+async def test_get_status_retries_once_on_401(session):
+    client = PanasonicCloudClient(session, "user", "pass", refresh_token="R")
+    client._token = "TKN"
+    client._client_id = "CID"
+    status_payload = {"a2wName": "X", "status": {"serviceType": "T", "operationMode": 1,
+                      "outdoorNow": 10, "waterPressure": 1.0, "pumpDuty": 0,
+                      "deiceStatus": 0, "specialStatus": 0, "forceDHW": 0,
+                      "zoneStatus": [], "tankStatus": None}}
+
+    refreshed = {"n": 0}
+
+    async def fake_refresh():
+        refreshed["n"] += 1
+        client._token = "TKN2"
+        return True
+
+    client.refresh = fake_refresh  # type: ignore[assignment]
+
+    with aioresponses() as m:
+        # first transfer attempt 401s, second (after refresh) succeeds
+        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=401)
+        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload=status_payload)
+        device = await client.get_status("HP1")
+
+    assert refreshed["n"] == 1
+    assert device.guid == "HP1"
+    assert device.operation_mode.name == "HEAT"
+
+
+async def test_get_status_raises_if_401_persists(session):
+    client = PanasonicCloudClient(session, "user", "pass", refresh_token="R")
+    client._token = "TKN"
+    client._client_id = "CID"
+
+    async def fake_refresh():
+        return True
+
+    client.refresh = fake_refresh  # type: ignore[assignment]
+
+    with aioresponses() as m:
+        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=401)
+        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=401)
+        with pytest.raises(ApiError):
+            await client.get_status("HP1")
+
+
 async def test_login_handles_relative_callback_resume(session):
     client = PanasonicCloudClient(session, "user", "pass")
     with aioresponses() as m:

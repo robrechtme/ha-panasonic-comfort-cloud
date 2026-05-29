@@ -245,22 +245,31 @@ class PanasonicCloudClient:
         return devices
 
     async def get_status(self, guid: str, *, direct: bool = False) -> AquareaDevice:
-        """Fetch live status for one Aquarea device via the Comfort Cloud transfer proxy."""
+        """Fetch live status for one Aquarea device via the Comfort Cloud transfer proxy.
+
+        The transfer endpoint occasionally returns 401 right after login; refresh
+        the token once and retry before giving up.
+        """
         body = {
             "apiName": f"/remote/v1/api/devices?gwid={guid}&deviceDirect={1 if direct else 0}",
             "requestMethod": "GET",
         }
+        data = await self._transfer(body, allow_refresh=True)
+        if "status" not in data:
+            raise ApiError(f"unexpected transfer response: {data}")
+        return AquareaDevice.from_status(guid, data)
+
+    async def _transfer(self, body: dict, *, allow_refresh: bool) -> dict:
         async with self._session.post(
             f"{const.API_BASE}/remote/v1/app/common/transfer",
             json=body,
             headers=self._headers(client_id=True),
         ) as resp:
+            if resp.status == 401 and allow_refresh and await self.refresh():
+                return await self._transfer(body, allow_refresh=False)
             if resp.status != 200:
                 raise ApiError(f"status fetch failed: HTTP {resp.status}")
-            data = await resp.json()
-        if "status" not in data:
-            raise ApiError(f"unexpected transfer response: {data}")
-        return AquareaDevice.from_status(guid, data)
+            return await resp.json()
 
     async def refresh(self) -> bool:
         """Refresh the access token using the stored refresh token. Returns success."""
