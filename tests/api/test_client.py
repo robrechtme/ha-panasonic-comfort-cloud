@@ -90,3 +90,22 @@ async def test_login_full_flow(session):
     assert client._token == "ACCESS"
     assert client._refresh_token == "REFRESH"
     assert client._client_id == "CID"
+
+
+async def test_refresh_token_updates_access_token(session):
+    client = PanasonicCloudClient(session, "user", "pass", refresh_token="OLD")
+    with aioresponses() as m:
+        m.post(
+            f"{c.AUTH_BASE}/oauth/token",
+            status=200,
+            payload={"access_token": "NEW_ACCESS", "refresh_token": "NEW_REFRESH"},
+        )
+        ok = await client.refresh()
+    assert ok is True
+    assert client._token == "NEW_ACCESS"
+    assert client._refresh_token == "NEW_REFRESH"
+
+
+async def test_refresh_returns_false_without_token(session):
+    client = PanasonicCloudClient(session, "user", "pass")
+    assert await client.refresh() is False

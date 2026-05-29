@@ -208,3 +208,29 @@ class PanasonicCloudClient:
         ) as resp:
             data = await resp.json()
         self._client_id = data["clientId"]
+
+    async def refresh(self) -> bool:
+        """Refresh the access token using the stored refresh token. Returns success."""
+        if not self._refresh_token:
+            return False
+        try:
+            async with self._session.post(
+                f"{const.AUTH_BASE}/oauth/token",
+                json={
+                    "scope": const.SCOPE,
+                    "client_id": const.CLIENT_ID,
+                    "refresh_token": self._refresh_token,
+                    "grant_type": "refresh_token",
+                },
+                headers={"Auth0-Client": const.AUTH0_CLIENT, "User-Agent": "okhttp/4.10.0"},
+            ) as resp:
+                if resp.status != 200:
+                    return False
+                data = await resp.json()
+        except aiohttp.ClientError:
+            return False
+        self._token = data["access_token"]
+        self._refresh_token = data.get("refresh_token", self._refresh_token)
+        if self._on_token_refresh:
+            await self._on_token_refresh(self._refresh_token)
+        return True
