@@ -13,7 +13,7 @@ async def test_user_flow_success(hass: HomeAssistant):
         client = mock_client_cls.return_value
         client.login = AsyncMock()
         client.get_devices = AsyncMock(return_value=[("HP1", "Warmtepomp")])
-        client._refresh_token = "REFRESH"
+        client.refresh_token = "REFRESH"
 
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -45,3 +45,49 @@ async def test_user_flow_invalid_auth(hass: HomeAssistant):
         )
     assert result["type"] == "form"
     assert result["errors"] == {"base": "invalid_auth"}
+
+
+async def test_user_flow_no_devices(hass: HomeAssistant):
+    with patch(
+        "custom_components.panasonic_aquarea.config_flow.PanasonicCloudClient"
+    ) as mock_client_cls:
+        client = mock_client_cls.return_value
+        client.login = AsyncMock()
+        client.get_devices = AsyncMock(return_value=[])
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"username": "u@example.com", "password": "pw"}
+        )
+    assert result["type"] == "form"
+    assert result["errors"] == {"base": "no_devices"}
+
+
+async def test_reauth_flow_success(hass: HomeAssistant):
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"username": "u@example.com", "password": "old", "refresh_token": "old"},
+        unique_id="u@example.com",
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.panasonic_aquarea.config_flow.PanasonicCloudClient"
+    ) as mock_client_cls:
+        client = mock_client_cls.return_value
+        client.login = AsyncMock()
+        client.get_devices = AsyncMock(return_value=[("HP1", "Warmtepomp")])
+        client.refresh_token = "NEW_REFRESH"
+
+        result = await entry.start_reauth_flow(hass)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"password": "newpw"}
+        )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    assert entry.data["password"] == "newpw"
+    assert entry.data["refresh_token"] == "NEW_REFRESH"

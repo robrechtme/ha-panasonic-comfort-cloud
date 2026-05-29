@@ -69,6 +69,11 @@ class PanasonicCloudClient:
         self._app_version = const.APP_VERSION_FALLBACK
         self._on_token_refresh = on_token_refresh
 
+    @property
+    def refresh_token(self) -> str | None:
+        """The current refresh token (rotates after login/refresh)."""
+        return self._refresh_token
+
     def _headers(self, *, client_id: bool = False) -> dict[str, str]:
         ts = app_timestamp()
         headers = {
