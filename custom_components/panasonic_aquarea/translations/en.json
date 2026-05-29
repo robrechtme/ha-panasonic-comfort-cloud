@@ -19,7 +19,6 @@
   "entity": {
     "sensor": {
       "outdoor_temperature": {"name": "Outdoor temperature"},
-      "water_pressure": {"name": "Water pressure"},
       "pump_duty": {"name": "Pump duty"},
       "operation_mode": {"name": "Operation mode"},
       "zone_temperature": {"name": "{zone} temperature"},
