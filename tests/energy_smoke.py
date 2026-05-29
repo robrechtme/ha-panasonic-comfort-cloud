@@ -12,7 +12,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import aiohttp  # noqa: E402
 
-from custom_components.panasonic_aquarea.api import const  # noqa: E402
 from custom_components.panasonic_aquarea.api.client import PanasonicCloudClient  # noqa: E402
 
 DATE = "20260529"  # today
@@ -50,8 +49,8 @@ async def main() -> None:
                     for k in ("heatConsumption", "coolConsumption", "tankConsumption")}
             print(f"\n=== dataMode={data_mode} ({label}) date={date} ===")
             print(f"top-level keys: {top_keys}; buckets: {len(buckets)}; sums: {sums}")
-            nonzero = [b for b in buckets
-                       if any(b.get(k) for k in ("heatConsumption", "coolConsumption", "tankConsumption"))]
+            keys = ("heatConsumption", "coolConsumption", "tankConsumption")
+            nonzero = [b for b in buckets if any(b.get(k) for k in keys)]
             if nonzero:
                 print(f"first non-zero bucket: {nonzero[0]}")
 
