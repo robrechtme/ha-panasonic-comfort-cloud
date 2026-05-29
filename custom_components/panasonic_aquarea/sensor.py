@@ -10,18 +10,29 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, UnitOfTemperature
+from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfTemperature
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import PanasonicAquareaConfigEntry
 from .api.models import AquareaDevice
+from .const import DOMAIN
 from .entity import AquareaEntity
 
 
 @dataclass(frozen=True, kw_only=True)
 class AquareaSensorDescription(SensorEntityDescription):
     value_fn: Callable[[AquareaDevice], float | int | str | None]
+
+
+_ENERGY_SENSORS = (
+    ("heating", lambda t: t.heating),
+    ("cooling", lambda t: t.cooling),
+    ("hot_water", lambda t: t.hot_water),
+    ("total", lambda t: t.total),
+)
 
 
 SENSORS: tuple[AquareaSensorDescription, ...] = (
@@ -56,6 +67,12 @@ async def async_setup_entry(
             entities.append(AquareaZoneTempSensor(coordinator, guid, zone.zone_id))
         if device.tank is not None:
             entities.append(AquareaTankTempSensor(coordinator, guid))
+    energy = coordinator.energy
+    if energy is not None:
+        for guid in energy.data:
+            entities += [
+                AquareaEnergySensor(energy, guid, key, fn) for key, fn in _ENERGY_SENSORS
+            ]
     async_add_entities(entities)
 
 
@@ -105,3 +122,23 @@ class AquareaTankTempSensor(AquareaEntity, SensorEntity):
     @property
     def native_value(self):
         return self.device.tank.current_temperature
+
+
+class AquareaEnergySensor(CoordinatorEntity, SensorEntity):
+    _attr_has_entity_name = True
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+
+    def __init__(self, energy_coordinator, guid, key, value_fn) -> None:
+        super().__init__(energy_coordinator)
+        self._guid = guid
+        self._value_fn = value_fn
+        self._attr_unique_id = f"{guid}_energy_{key}"
+        self._attr_translation_key = f"energy_{key}"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, guid)})
+
+    @property
+    def native_value(self):
+        totals = self.coordinator.data.get(self._guid)
+        return self._value_fn(totals) if totals else None

@@ -21,7 +21,11 @@
       "outdoor_temperature": {"name": "Outdoor temperature"},
       "pump_duty": {"name": "Pump duty"},
       "zone_temperature": {"name": "{zone} temperature"},
-      "tank_temperature": {"name": "Tank temperature"}
+      "tank_temperature": {"name": "Tank temperature"},
+      "energy_heating": {"name": "Heating energy today"},
+      "energy_cooling": {"name": "Cooling energy today"},
+      "energy_hot_water": {"name": "Hot water energy today"},
+      "energy_total": {"name": "Total energy today"}
     },
     "binary_sensor": {
       "defrost": {"name": "Defrost"},
