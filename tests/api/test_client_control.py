@@ -30,3 +30,52 @@ async def test_set_tank_temperature_payload(client):
     assert body["apiName"] == "/remote/v1/api/devices"
     assert body["requestMethod"] == "POST"
     assert body["bodyParam"] == {"gwid": "HP1", "tankStatus": {"heatSet": 50}}
+
+
+async def test_set_zone_heat_temperature_payload(client):
+    with aioresponses() as m:
+        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload={"result": 0})
+        await client.set_zone_temperature("HP1", 2, 21, cooling=False)
+        body = _last_transfer_body(m)
+    assert body["bodyParam"] == {"gwid": "HP1", "zoneStatus": [{"zoneId": 2, "heatSet": 21}]}
+
+
+async def test_set_zone_cool_temperature_payload(client):
+    with aioresponses() as m:
+        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload={"result": 0})
+        await client.set_zone_temperature("HP1", 2, 24, cooling=True)
+        body = _last_transfer_body(m)
+    assert body["bodyParam"] == {"gwid": "HP1", "zoneStatus": [{"zoneId": 2, "coolSet": 24}]}
+
+
+async def test_set_zone_operation_payload(client):
+    with aioresponses() as m:
+        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload={"result": 0})
+        await client.set_zone_operation("HP1", 1, on=False)
+        body = _last_transfer_body(m)
+    assert body["bodyParam"] == {"gwid": "HP1", "zoneStatus": [{"zoneId": 1, "operationStatus": 0}]}
+
+
+async def test_set_tank_operation_payload(client):
+    with aioresponses() as m:
+        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload={"result": 0})
+        await client.set_tank_operation("HP1", on=True)
+        body = _last_transfer_body(m)
+    assert body["bodyParam"] == {"gwid": "HP1", "tankStatus": {"operationStatus": 1}}
+
+
+async def test_set_force_dhw_payload(client):
+    with aioresponses() as m:
+        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload={"result": 0})
+        await client.set_force_dhw("HP1", on=True)
+        body = _last_transfer_body(m)
+    assert body["bodyParam"] == {"gwid": "HP1", "forceDHW": 1}
+
+
+async def test_set_operation_mode_payload(client):
+    from custom_components.panasonic_aquarea.api.models import UpdateOperationMode
+    with aioresponses() as m:
+        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload={"result": 0})
+        await client.set_operation_mode("HP1", UpdateOperationMode.HEAT)
+        body = _last_transfer_body(m)
+    assert body["bodyParam"] == {"gwid": "HP1", "operationMode": 1}

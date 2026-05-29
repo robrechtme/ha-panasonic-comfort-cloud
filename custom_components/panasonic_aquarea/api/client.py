@@ -19,7 +19,7 @@ import aiohttp
 
 from . import const
 from .const import AQUAREA_DEVICE_TYPE
-from .models import AquareaDevice
+from .models import AquareaDevice, UpdateOperationMode
 from .signing import app_timestamp, cfc_key
 
 _LOGGER = logging.getLogger(__name__)
@@ -308,6 +308,26 @@ class PanasonicCloudClient:
 
     async def set_tank_temperature(self, gwid: str, temperature: int) -> None:
         await self._write({"gwid": gwid, "tankStatus": {"heatSet": temperature}})
+
+    async def set_zone_temperature(
+        self, gwid: str, zone_id: int, temperature: int, *, cooling: bool
+    ) -> None:
+        key = "coolSet" if cooling else "heatSet"
+        await self._write({"gwid": gwid, "zoneStatus": [{"zoneId": zone_id, key: temperature}]})
+
+    async def set_zone_operation(self, gwid: str, zone_id: int, *, on: bool) -> None:
+        await self._write(
+            {"gwid": gwid, "zoneStatus": [{"zoneId": zone_id, "operationStatus": int(on)}]}
+        )
+
+    async def set_tank_operation(self, gwid: str, *, on: bool) -> None:
+        await self._write({"gwid": gwid, "tankStatus": {"operationStatus": int(on)}})
+
+    async def set_force_dhw(self, gwid: str, *, on: bool) -> None:
+        await self._write({"gwid": gwid, "forceDHW": int(on)})
+
+    async def set_operation_mode(self, gwid: str, mode: UpdateOperationMode) -> None:
+        await self._write({"gwid": gwid, "operationMode": int(mode)})
 
     async def ensure_session(self) -> None:
         """Make sure we have a usable access token + client id.
