@@ -116,3 +116,15 @@ class AquareaDevice:
             zones=tuple(Zone.from_dict(z) for z in status.get("zoneStatus", [])),
             tank=Tank.from_dict(tank_raw) if tank_raw else None,
         )
+
+
+class UpdateOperationMode(IntEnum):
+    """Values accepted by the operationMode write.
+
+    DHW is excluded — it is not a settable whole-unit operation mode.
+    """
+
+    OFF = 0
+    HEAT = 1
+    COOL = 2
+    AUTO = 3

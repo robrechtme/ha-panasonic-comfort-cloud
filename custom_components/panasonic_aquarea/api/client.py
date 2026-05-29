@@ -297,6 +297,18 @@ class PanasonicCloudClient:
             await self._on_token_refresh(self._refresh_token)
         return True
 
+    async def _write(self, body_param: dict) -> dict:
+        """POST a control write through the transfer proxy (retries once on 401)."""
+        envelope = {
+            "apiName": "/remote/v1/api/devices",
+            "requestMethod": "POST",
+            "bodyParam": body_param,
+        }
+        return await self._transfer(envelope, allow_refresh=True)
+
+    async def set_tank_temperature(self, gwid: str, temperature: int) -> None:
+        await self._write({"gwid": gwid, "tankStatus": {"heatSet": temperature}})
+
     async def ensure_session(self) -> None:
         """Make sure we have a usable access token + client id.
 
