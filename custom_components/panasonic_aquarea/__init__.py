@@ -7,7 +7,12 @@ from homeassistant.core import HomeAssistant
 
 from .coordinator import PanasonicAquareaCoordinator
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.WATER_HEATER]
+PLATFORMS: list[Platform] = [
+    Platform.SENSOR,
+    Platform.BINARY_SENSOR,
+    Platform.WATER_HEATER,
+    Platform.CLIMATE,
+]
 
 type PanasonicAquareaConfigEntry = ConfigEntry[PanasonicAquareaCoordinator]
 

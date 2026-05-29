@@ -30,6 +30,9 @@
     },
     "water_heater": {
       "tank": {"name": "Tank"}
+    },
+    "climate": {
+      "zone": {"name": "{zone}"}
     }
   }
 }
