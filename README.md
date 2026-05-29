@@ -8,18 +8,23 @@ It talks to Comfort Cloud directly through the app's proxy endpoint — **no dep
 third-party Panasonic library** (stdlib + Home Assistant's bundled `aiohttp` only), so it doesn't
 break when community libraries fall behind Panasonic's API changes.
 
-> **Status:** read-only (v1). Control (setpoints, modes, force-DHW) is planned. See
-> [`docs/superpowers/specs`](docs/superpowers/specs) for the design.
+> **Status:** read + control. See [`docs/superpowers/specs`](docs/superpowers/specs) for the design.
 
 ## Entities
 
 | Platform | Entity |
 |---|---|
-| `sensor` | Outdoor temperature, pump duty, operation mode, per-zone temperature, DHW tank temperature |
+| `climate` | One per absolute-temperature zone (on/off + setpoint; heat/cool follows the device mode) |
+| `select` | Operation mode (Off / Heat / Cool / Auto) — device-wide |
+| `water_heater` | DHW tank (target temperature + on/off) |
+| `number` | Compensation offset, one per offset-mode zone |
+| `switch` | Per offset-zone on/off, and Force DHW |
+| `sensor` | Outdoor temperature, pump duty, per-zone temperature, DHW tank temperature |
 | `binary_sensor` | Defrost active, fault |
 
-Zones are auto-detected: absolute-temperature zones and compensation-offset zones are both
-represented. All entities group under one device per heat pump.
+Zones are auto-detected: absolute-temperature zones become `climate` entities; compensation-offset
+zones become a `number` (the offset) plus an on/off `switch`. Operation mode is device-wide, so it's
+a single `select`. All entities group under one device per heat pump.
 
 ## Installation (HACS — custom repository)
 
@@ -46,9 +51,10 @@ directory and restart.
 ## Known limitations
 
 - **Water pressure** is only reported by Panasonic's *live* (`deviceDirect=1`) response; the cached
-  polling mode this integration uses (`deviceDirect=0`, chosen for reliability) omits it, so a water
-  pressure sensor is not currently exposed.
-- Read-only for now — no control entities yet.
+  polling mode this integration uses (`deviceDirect=0`, chosen for reliability) omits it, so no water
+  pressure sensor is exposed.
+- Offset-mode zone `number` controls always edit the heat-compensation offset (the API setpoint is
+  mode-agnostic for those zones).
 
 ## License
 
