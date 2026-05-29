@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -18,6 +18,7 @@ async def _setup(hass, aquarea_status):
         client.ensure_session = AsyncMock()
         client.get_devices = AsyncMock(return_value=[("HP1", "Warmtepomp")])
         client.get_status = AsyncMock(return_value=device)
+        client.get_energy_today = AsyncMock(return_value=MagicMock())
         client.set_zone_temperature = AsyncMock()
         client.set_zone_operation = AsyncMock()
         client.set_force_dhw = AsyncMock()
@@ -76,6 +77,7 @@ async def test_force_dhw_switch_absent_without_tank(hass: HomeAssistant, aquarea
         client.ensure_session = AsyncMock()
         client.get_devices = AsyncMock(return_value=[("HP1", "Warmtepomp")])
         client.get_status = AsyncMock(return_value=device)
+        client.get_energy_today = AsyncMock(return_value=MagicMock())
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
     assert hass.states.get("switch.warmtepomp_force_dhw") is None

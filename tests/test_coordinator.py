@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -29,6 +29,7 @@ async def test_one_failing_device_does_not_block_others(hass: HomeAssistant, aqu
         client.ensure_session = AsyncMock()
         client.get_devices = AsyncMock(return_value=[("HP1", "A"), ("HP2", "B")])
         client.get_status = AsyncMock(side_effect=fake_get_status)
+        client.get_energy_today = AsyncMock(return_value=MagicMock())
 
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()

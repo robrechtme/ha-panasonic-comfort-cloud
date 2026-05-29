@@ -5,7 +5,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-from .coordinator import PanasonicAquareaCoordinator
+from .coordinator import PanasonicAquareaCoordinator, PanasonicAquareaEnergyCoordinator
 
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
@@ -24,6 +24,13 @@ async def async_setup_entry(
 ) -> bool:
     coordinator = PanasonicAquareaCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
+
+    energy_coordinator = PanasonicAquareaEnergyCoordinator(
+        hass, coordinator.client, list(coordinator.data)
+    )
+    await energy_coordinator.async_config_entry_first_refresh()
+    coordinator.energy = energy_coordinator
+
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

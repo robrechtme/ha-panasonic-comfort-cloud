@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -21,6 +21,7 @@ async def _setup(hass, aquarea_status):
         client.ensure_session = AsyncMock()
         client.get_devices = AsyncMock(return_value=[("HP1", "Warmtepomp")])
         client.get_status = AsyncMock(return_value=device)
+        client.get_energy_today = AsyncMock(return_value=MagicMock())
         client.set_tank_temperature = AsyncMock()
         client.set_tank_operation = AsyncMock()
         assert await hass.config_entries.async_setup(entry.entry_id)
