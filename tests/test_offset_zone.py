@@ -60,3 +60,24 @@ async def test_force_dhw_switch_turn_on(hass: HomeAssistant, aquarea_status):
         {"entity_id": "switch.warmtepomp_force_dhw"}, blocking=True,
     )
     client.set_force_dhw.assert_awaited_once_with("HP1", on=True)
+
+
+async def test_force_dhw_switch_absent_without_tank(hass: HomeAssistant, aquarea_status):
+    import copy
+    tankless = copy.deepcopy(aquarea_status)
+    tankless["status"]["tankStatus"] = None
+    device = AquareaDevice.from_status("HP1", tankless)
+    entry = MockConfigEntry(
+        domain=DOMAIN, data={"username": "u", "password": "p", "refresh_token": "r"}, unique_id="u"
+    )
+    entry.add_to_hass(hass)
+    with patch("custom_components.panasonic_aquarea.coordinator.PanasonicCloudClient") as cls:
+        client = cls.return_value
+        client.ensure_session = AsyncMock()
+        client.get_devices = AsyncMock(return_value=[("HP1", "Warmtepomp")])
+        client.get_status = AsyncMock(return_value=device)
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    assert hass.states.get("switch.warmtepomp_force_dhw") is None
+    # offset-zone switch still present
+    assert hass.states.get("switch.warmtepomp_boven") is not None

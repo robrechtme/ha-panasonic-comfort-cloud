@@ -21,7 +21,8 @@ async def async_setup_entry(
         for zone in device.zones:
             if zone.mode is ZoneMode.OFFSET:
                 entities.append(AquareaZoneSwitch(coordinator, guid, zone.zone_id))
-        entities.append(AquareaForceDHWSwitch(coordinator, guid))
+        if device.tank is not None:
+            entities.append(AquareaForceDHWSwitch(coordinator, guid))
     async_add_entities(entities)
 
 
