@@ -1,0 +1,15 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {"username": "Email", "password": "Password"}
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid credentials",
+      "cannot_connect": "Failed to connect",
+      "no_devices": "No Aquarea devices found on this account"
+    },
+    "abort": {"already_configured": "This account is already configured"}
+  }
+}
