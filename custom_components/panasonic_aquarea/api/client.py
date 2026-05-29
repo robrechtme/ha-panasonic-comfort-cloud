@@ -267,3 +267,18 @@ class PanasonicCloudClient:
         if self._on_token_refresh:
             await self._on_token_refresh(self._refresh_token)
         return True
+
+    async def ensure_session(self) -> None:
+        """Make sure we have a usable access token + client id.
+
+        Prefer refreshing an existing refresh token (cheap, avoids the Auth0
+        brute-force lockout); only do a full login when there is nothing to
+        refresh or the refresh fails.
+        """
+        if self._token and self._client_id:
+            return
+        if self._refresh_token and await self.refresh():
+            if not self._client_id:
+                await self._resolve_client_id()
+            return
+        await self.login()

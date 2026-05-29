@@ -142,3 +142,42 @@ async def test_get_status_returns_parsed_device(session, aquarea_status):
     assert device.guid == "HP1"
     assert device.outdoor_temperature == 31
     assert device.tank.target_temperature == 52
+
+
+async def test_ensure_session_logs_in_when_no_token(session):
+    client = PanasonicCloudClient(session, "user", "pass")
+    calls = {"login": 0, "refresh": 0}
+
+    async def fake_login():
+        calls["login"] += 1
+        client._token = "ACCESS"
+
+    async def fake_refresh():
+        calls["refresh"] += 1
+        return True
+
+    client.login = fake_login          # type: ignore[assignment]
+    client.refresh = fake_refresh      # type: ignore[assignment]
+
+    await client.ensure_session()
+    assert calls == {"login": 1, "refresh": 0}
+
+
+async def test_ensure_session_refreshes_when_refresh_token_present(session):
+    client = PanasonicCloudClient(session, "user", "pass", refresh_token="R")
+    calls = {"login": 0, "refresh": 0}
+
+    async def fake_login():
+        calls["login"] += 1
+
+    async def fake_refresh():
+        calls["refresh"] += 1
+        client._token = "ACCESS"
+        client._client_id = "CID"
+        return True
+
+    client.login = fake_login          # type: ignore[assignment]
+    client.refresh = fake_refresh      # type: ignore[assignment]
+
+    await client.ensure_session()
+    assert calls == {"login": 0, "refresh": 1}
