@@ -20,6 +20,7 @@ async def _setup(hass, aquarea_status):
         client.get_status = AsyncMock(return_value=device)
         client.set_zone_temperature = AsyncMock()
         client.set_zone_operation = AsyncMock()
+        client.set_operation_mode = AsyncMock()
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
     return entry, client
@@ -39,6 +40,15 @@ async def test_climate_state(hass: HomeAssistant, aquarea_status):
     assert state.attributes["temperature"] == 22
 
 
+async def test_climate_reflects_device_mode_and_step(hass, aquarea_status):
+    await _setup(hass, aquarea_status)
+    state = hass.states.get("climate.warmtepomp_beneden")
+    assert state.state == "cool"  # device mode COOL, zone on
+    assert state.attributes["target_temp_step"] == 1
+    assert state.attributes["current_temperature"] == 24
+    assert state.attributes["temperature"] == 22  # cool setpoint in COOL mode
+
+
 async def test_climate_set_temperature_uses_cool_in_cool_mode(hass: HomeAssistant, aquarea_status):
     _, client = await _setup(hass, aquarea_status)
     await hass.services.async_call(
@@ -48,3 +58,14 @@ async def test_climate_set_temperature_uses_cool_in_cool_mode(hass: HomeAssistan
         blocking=True,
     )
     client.set_zone_temperature.assert_awaited_once_with("HP1", 2, 23, cooling=True)
+
+
+async def test_climate_set_hvac_mode_drives_operation_mode(hass, aquarea_status):
+    from custom_components.panasonic_aquarea.api.models import UpdateOperationMode
+    _, client = await _setup(hass, aquarea_status)
+    client.set_zone_operation = AsyncMock()
+    await hass.services.async_call(
+        "climate", "set_hvac_mode",
+        {"entity_id": "climate.warmtepomp_beneden", "hvac_mode": "heat"}, blocking=True,
+    )
+    client.set_operation_mode.assert_awaited_once_with("HP1", UpdateOperationMode.HEAT)

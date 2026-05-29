@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from homeassistant.components.climate import (
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_TARGET_TEMP_LOW,
     ClimateEntity,
     ClimateEntityFeature,
     HVACAction,
@@ -12,8 +14,19 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import PanasonicAquareaConfigEntry
-from .api.models import OperationMode, ZoneMode
+from .api.models import OperationMode, UpdateOperationMode, ZoneMode
 from .entity import AquareaEntity
+
+_MODE_TO_HVAC = {
+    OperationMode.HEAT: HVACMode.HEAT,
+    OperationMode.COOL: HVACMode.COOL,
+    OperationMode.AUTO: HVACMode.AUTO,
+}
+_HVAC_TO_UPDATE = {
+    HVACMode.HEAT: UpdateOperationMode.HEAT,
+    HVACMode.COOL: UpdateOperationMode.COOL,
+    HVACMode.AUTO: UpdateOperationMode.AUTO,
+}
 
 
 async def async_setup_entry(
@@ -32,9 +45,11 @@ async def async_setup_entry(
 
 class AquareaZoneClimate(AquareaEntity, ClimateEntity):
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
-    _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT_COOL]
+    _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO]
+    _attr_target_temperature_step = 1
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE
+        | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
         | ClimateEntityFeature.TURN_ON
         | ClimateEntityFeature.TURN_OFF
     )
@@ -51,55 +66,96 @@ class AquareaZoneClimate(AquareaEntity, ClimateEntity):
         return next(z for z in self.device.zones if z.zone_id == self._zone_id)
 
     @property
-    def _cooling(self) -> bool:
-        return self.device.operation_mode is OperationMode.COOL
+    def _mode(self) -> OperationMode:
+        return self.device.operation_mode
+
+    @property
+    def hvac_mode(self) -> HVACMode:
+        if not self._zone().on:
+            return HVACMode.OFF
+        return _MODE_TO_HVAC.get(self._mode, HVACMode.OFF)
+
+    @property
+    def hvac_action(self) -> HVACAction:
+        if not self._zone().on:
+            return HVACAction.OFF
+        if self._mode is OperationMode.COOL:
+            return HVACAction.COOLING
+        if self._mode is OperationMode.HEAT:
+            return HVACAction.HEATING
+        return HVACAction.IDLE
 
     @property
     def current_temperature(self) -> int:
         return self._zone().current_temperature
 
     @property
-    def target_temperature(self) -> int:
+    def target_temperature(self) -> int | None:
         z = self._zone()
-        return z.cool_setpoint if self._cooling else z.heat_setpoint
+        if self._mode is OperationMode.HEAT:
+            return z.heat_setpoint
+        if self._mode is OperationMode.COOL:
+            return z.cool_setpoint
+        return None  # AUTO uses the range below
+
+    @property
+    def target_temperature_low(self) -> int | None:
+        return self._zone().heat_setpoint if self._mode is OperationMode.AUTO else None
+
+    @property
+    def target_temperature_high(self) -> int | None:
+        return self._zone().cool_setpoint if self._mode is OperationMode.AUTO else None
 
     @property
     def min_temp(self) -> int:
         z = self._zone()
-        return z.cool_min if self._cooling else z.heat_min
+        if self._mode is OperationMode.COOL:
+            return z.cool_min
+        if self._mode is OperationMode.AUTO:
+            return min(z.heat_min, z.cool_min)
+        return z.heat_min
 
     @property
     def max_temp(self) -> int:
         z = self._zone()
-        return z.cool_max if self._cooling else z.heat_max
-
-    @property
-    def hvac_mode(self) -> HVACMode:
-        return HVACMode.HEAT_COOL if self._zone().on else HVACMode.OFF
-
-    @property
-    def hvac_action(self) -> HVACAction:
-        if not self._zone().on:
-            return HVACAction.OFF
-        return HVACAction.COOLING if self._cooling else HVACAction.HEATING
+        if self._mode is OperationMode.HEAT:
+            return z.heat_max
+        if self._mode is OperationMode.AUTO:
+            return max(z.heat_max, z.cool_max)
+        return z.cool_max
 
     async def async_set_temperature(self, **kwargs) -> None:
-        temp = int(kwargs[ATTR_TEMPERATURE])
-        if not self.min_temp <= temp <= self.max_temp:
-            raise ValueError(f"temperature {temp} out of range {self.min_temp}-{self.max_temp}")
-        await self.coordinator.client.set_zone_temperature(
-            self._guid, self._zone_id, temp, cooling=self._cooling
-        )
+        guid = self._guid
+        if ATTR_TARGET_TEMP_LOW in kwargs or ATTR_TARGET_TEMP_HIGH in kwargs:
+            low = kwargs.get(ATTR_TARGET_TEMP_LOW)
+            high = kwargs.get(ATTR_TARGET_TEMP_HIGH)
+            if low is not None:
+                await self.coordinator.client.set_zone_temperature(
+                    guid, self._zone_id, int(low), cooling=False
+                )
+            if high is not None:
+                await self.coordinator.client.set_zone_temperature(
+                    guid, self._zone_id, int(high), cooling=True
+                )
+        elif ATTR_TEMPERATURE in kwargs:
+            temp = int(kwargs[ATTR_TEMPERATURE])
+            await self.coordinator.client.set_zone_temperature(
+                guid, self._zone_id, temp, cooling=self._mode is OperationMode.COOL
+            )
         await self.coordinator.async_request_refresh()
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        await self.coordinator.client.set_zone_operation(
-            self._guid, self._zone_id, on=hvac_mode != HVACMode.OFF
-        )
+        guid = self._guid
+        if hvac_mode == HVACMode.OFF:
+            await self.coordinator.client.set_zone_operation(guid, self._zone_id, on=False)
+        else:
+            await self.coordinator.client.set_operation_mode(guid, _HVAC_TO_UPDATE[hvac_mode])
+            if not self._zone().on:
+                await self.coordinator.client.set_zone_operation(guid, self._zone_id, on=True)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_on(self) -> None:
-        await self.async_set_hvac_mode(HVACMode.HEAT_COOL)
+        await self.async_set_hvac_mode(_MODE_TO_HVAC.get(self._mode, HVACMode.HEAT))
 
     async def async_turn_off(self) -> None:
         await self.async_set_hvac_mode(HVACMode.OFF)

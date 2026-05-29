@@ -39,9 +39,6 @@
     "switch": {
       "zone_power": {"name": "{zone}"},
       "force_dhw": {"name": "Force DHW"}
-    },
-    "select": {
-      "operation_mode": {"name": "Operation mode"}
     }
   }
 }
