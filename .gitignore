@@ -1,4 +1,14 @@
-node_modules/
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Secrets / local
 .env
 .env.local
-.cache.json
+
+# HA test artifacts
+.storage/
