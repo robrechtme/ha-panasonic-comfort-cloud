@@ -18,6 +18,8 @@ from urllib.parse import parse_qs, urlparse
 import aiohttp
 
 from . import const
+from .const import AQUAREA_DEVICE_TYPE
+from .models import AquareaDevice
 from .signing import app_timestamp, cfc_key
 
 _LOGGER = logging.getLogger(__name__)
@@ -208,6 +210,37 @@ class PanasonicCloudClient:
         ) as resp:
             data = await resp.json()
         self._client_id = data["clientId"]
+
+    async def get_devices(self) -> list[tuple[str, str]]:
+        """Return [(guid, name)] for Aquarea (air-to-water) devices on the account."""
+        async with self._session.get(
+            f"{const.API_BASE}/device/group/", headers=self._headers(client_id=True)
+        ) as resp:
+            if resp.status != 200:
+                raise ApiError(f"device list failed: HTTP {resp.status}")
+            data = await resp.json()
+        devices: list[tuple[str, str]] = []
+        for group in data.get("groupList", []):
+            for dev in group.get("deviceList", []):
+                if dev.get("deviceType") == AQUAREA_DEVICE_TYPE:
+                    devices.append((dev["deviceGuid"], dev.get("deviceName", dev["deviceGuid"])))
+        return devices
+
+    async def get_status(self, guid: str, *, direct: bool = False) -> AquareaDevice:
+        """Fetch live status for one Aquarea device via the Comfort Cloud transfer proxy."""
+        body = {
+            "apiName": f"/remote/v1/api/devices?gwid={guid}&deviceDirect={1 if direct else 0}",
+            "requestMethod": "GET",
+        }
+        async with self._session.post(
+            f"{const.API_BASE}/remote/v1/app/common/transfer",
+            json=body,
+            headers=self._headers(client_id=True),
+        ) as resp:
+            if resp.status != 200:
+                raise ApiError(f"status fetch failed: HTTP {resp.status}")
+            data = await resp.json()
+        return AquareaDevice.from_status(guid, data)
 
     async def refresh(self) -> bool:
         """Refresh the access token using the stored refresh token. Returns success."""

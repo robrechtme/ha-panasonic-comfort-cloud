@@ -109,3 +109,36 @@ async def test_refresh_token_updates_access_token(session):
 async def test_refresh_returns_false_without_token(session):
     client = PanasonicCloudClient(session, "user", "pass")
     assert await client.refresh() is False
+
+
+async def test_get_devices_returns_aquarea_only(session):
+    client = PanasonicCloudClient(session, "user", "pass")
+    client._token = "TKN"
+    client._client_id = "CID"
+    with aioresponses() as m:
+        m.get(
+            f"{c.API_BASE}/device/group/",
+            status=200,
+            payload={
+                "groupList": [
+                    {"groupName": "House", "deviceList": [
+                        {"deviceGuid": "AC1", "deviceType": "1", "deviceName": "Airco"},
+                        {"deviceGuid": "HP1", "deviceType": "2", "deviceName": "Warmtepomp"},
+                    ]}
+                ]
+            },
+        )
+        devices = await client.get_devices()
+    assert devices == [("HP1", "Warmtepomp")]
+
+
+async def test_get_status_returns_parsed_device(session, aquarea_status):
+    client = PanasonicCloudClient(session, "user", "pass")
+    client._token = "TKN"
+    client._client_id = "CID"
+    with aioresponses() as m:
+        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload=aquarea_status)
+        device = await client.get_status("HP1")
+    assert device.guid == "HP1"
+    assert device.outdoor_temperature == 31
+    assert device.tank.target_temperature == 52
