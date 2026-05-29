@@ -27,6 +27,9 @@
     "binary_sensor": {
       "defrost": {"name": "Defrost"},
       "fault": {"name": "Fault"}
+    },
+    "water_heater": {
+      "tank": {"name": "Tank"}
     }
   }
 }
