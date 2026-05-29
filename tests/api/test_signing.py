@@ -1,4 +1,4 @@
-from custom_components.panasonic_aquarea.api.signing import cfc_key, app_timestamp
+from custom_components.panasonic_aquarea.api.signing import app_timestamp, cfc_key
 
 
 def test_app_timestamp_format():

@@ -129,7 +129,9 @@ class PanasonicCloudClient:
         async with self._session.get(
             f"{const.AUTH_BASE}/authorize", params=params, allow_redirects=False
         ) as resp:
-            location = resp.headers["Location"]
+            location = resp.headers.get("Location")
+        if not location:
+            raise AuthError("authorize did not redirect")
         real_state = self._query_param(location, "state") or state
 
         login_url = location if location.startswith("http") else f"{const.AUTH_BASE}{location}"
@@ -195,6 +197,8 @@ class PanasonicCloudClient:
             headers=auth_headers,
         ) as resp:
             data = await resp.json()
+        if "access_token" not in data:
+            raise AuthError("token exchange failed")
         self._token = data["access_token"]
         self._refresh_token = data.get("refresh_token")
         if self._refresh_token and self._on_token_refresh:
@@ -209,6 +213,8 @@ class PanasonicCloudClient:
             headers=self._headers(),
         ) as resp:
             data = await resp.json()
+        if "clientId" not in data:
+            raise AuthError("client id resolution failed")
         self._client_id = data["clientId"]
 
     async def get_devices(self) -> list[tuple[str, str]]:
@@ -240,6 +246,8 @@ class PanasonicCloudClient:
             if resp.status != 200:
                 raise ApiError(f"status fetch failed: HTTP {resp.status}")
             data = await resp.json()
+        if "status" not in data:
+            raise ApiError(f"unexpected transfer response: {data}")
         return AquareaDevice.from_status(guid, data)
 
     async def refresh(self) -> bool:

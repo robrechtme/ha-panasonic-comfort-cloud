@@ -1,14 +1,12 @@
-import base64
-import hashlib
 import re
 
 import aiohttp
 import pytest
 from aioresponses import aioresponses
 
-from custom_components.panasonic_aquarea.api.client import PanasonicCloudClient
-from custom_components.panasonic_aquarea.api.const import PLAY_STORE_URL, APP_VERSION_FALLBACK
 from custom_components.panasonic_aquarea.api import const as c
+from custom_components.panasonic_aquarea.api.client import ApiError, AuthError, PanasonicCloudClient
+from custom_components.panasonic_aquarea.api.const import APP_VERSION_FALLBACK, PLAY_STORE_URL
 
 
 @pytest.fixture
@@ -181,3 +179,23 @@ async def test_ensure_session_refreshes_when_refresh_token_present(session):
 
     await client.ensure_session()
     assert calls == {"login": 0, "refresh": 1}
+
+
+async def test_login_raises_autherror_when_authorize_has_no_redirect(session):
+    client = PanasonicCloudClient(session, "user", "pass")
+    with aioresponses() as m:
+        m.get(PLAY_STORE_URL, body='["4.3.0"]', status=200)
+        # Auth0 returns 200 with no Location (e.g. throttled / error page)
+        m.get(re.compile(rf"{re.escape(c.AUTH_BASE)}/authorize.*"), status=200, body="nope")
+        with pytest.raises(AuthError):
+            await client.login()
+
+
+async def test_get_status_raises_apierror_on_error_envelope(session):
+    client = PanasonicCloudClient(session, "user", "pass")
+    client._token = "TKN"
+    client._client_id = "CID"
+    with aioresponses() as m:
+        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload={"result": 4106})
+        with pytest.raises(ApiError):
+            await client.get_status("HP1")
