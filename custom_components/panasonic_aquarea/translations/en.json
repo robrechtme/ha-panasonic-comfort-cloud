@@ -11,5 +11,19 @@
       "no_devices": "No Aquarea devices found on this account"
     },
     "abort": {"already_configured": "This account is already configured"}
+  },
+  "entity": {
+    "sensor": {
+      "outdoor_temperature": {"name": "Outdoor temperature"},
+      "water_pressure": {"name": "Water pressure"},
+      "pump_duty": {"name": "Pump duty"},
+      "operation_mode": {"name": "Operation mode"},
+      "zone_temperature": {"name": "{zone} temperature"},
+      "tank_temperature": {"name": "Tank temperature"}
+    },
+    "binary_sensor": {
+      "defrost": {"name": "Defrost"},
+      "fault": {"name": "Fault"}
+    }
   }
 }
