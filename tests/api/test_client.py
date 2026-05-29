@@ -199,3 +199,46 @@ async def test_get_status_raises_apierror_on_error_envelope(session):
         m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload={"result": 4106})
         with pytest.raises(ApiError):
             await client.get_status("HP1")
+
+
+async def test_login_handles_relative_callback_resume(session):
+    client = PanasonicCloudClient(session, "user", "pass")
+    with aioresponses() as m:
+        m.get(PLAY_STORE_URL, body='["4.3.0"]', status=200)
+        m.get(
+            re.compile(rf"{re.escape(c.AUTH_BASE)}/authorize\?.*"),
+            status=302,
+            headers={"Location": f"{c.AUTH_BASE}/login?state=S"},
+        )
+        m.get(
+            re.compile(rf"{re.escape(c.AUTH_BASE)}/login.*"),
+            status=200,
+            headers={"Set-Cookie": "_csrf=C; Path=/"},
+            body="<html></html>",
+        )
+        m.post(
+            f"{c.AUTH_BASE}/usernamepassword/login",
+            status=200,
+            body='<input type="hidden" name="wa" value="x"/>',
+        )
+        # Real cloud: callback redirects to a RELATIVE /authorize/resume
+        m.post(
+            f"{c.AUTH_BASE}/login/callback",
+            status=302,
+            headers={"Location": "/authorize/resume?state=S"},
+        )
+        # Resuming (absolute URL must be formed) yields the auth code
+        m.get(
+            re.compile(rf"{re.escape(c.AUTH_BASE)}/authorize/resume.*"),
+            status=302,
+            headers={"Location": f"{c.REDIRECT_URI}?code=CODE&state=S"},
+        )
+        m.post(
+            f"{c.AUTH_BASE}/oauth/token",
+            status=200,
+            payload={"access_token": "A", "refresh_token": "R"},
+        )
+        m.post(f"{c.API_BASE}/auth/v2/login", status=200, payload={"clientId": "CID"})
+        await client.login()
+    assert client._token == "A"
+    assert client._client_id == "CID"

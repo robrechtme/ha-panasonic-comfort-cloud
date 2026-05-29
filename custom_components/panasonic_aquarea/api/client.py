@@ -113,6 +113,11 @@ class PanasonicCloudClient:
     def _query_param(location: str, key: str) -> str | None:
         return parse_qs(urlparse(location).query).get(key, [None])[0]
 
+    @staticmethod
+    def _absolute_auth_url(location: str) -> str:
+        """Make an Auth0 redirect Location absolute (some are returned relative)."""
+        return location if location.startswith("http") else f"{const.AUTH_BASE}{location}"
+
     async def login(self) -> None:
         """Run the full OAuth2 + PKCE login and resolve a client id."""
         self._app_version = await self._fetch_app_version()
@@ -139,7 +144,7 @@ class PanasonicCloudClient:
             raise AuthError("authorize did not redirect")
         real_state = self._query_param(location, "state") or state
 
-        login_url = location if location.startswith("http") else f"{const.AUTH_BASE}{location}"
+        login_url = self._absolute_auth_url(location)
         async with self._session.get(login_url, allow_redirects=False) as resp:
             csrf = ""
             for cookie in resp.headers.getall("Set-Cookie", []):
@@ -184,7 +189,9 @@ class PanasonicCloudClient:
             callback_location = resp.headers["Location"]
         code = self._query_param(callback_location, "code")
         if not code:
-            async with self._session.get(callback_location, allow_redirects=False) as resp:
+            async with self._session.get(
+                self._absolute_auth_url(callback_location), allow_redirects=False
+            ) as resp:
                 code = self._query_param(resp.headers["Location"], "code")
         if not code:
             raise AuthError("no authorization code returned")

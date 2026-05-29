@@ -3,12 +3,17 @@
 Usage:
     PANASONIC_USERNAME=... PANASONIC_PASSWORD=... python tests/live_smoke.py
 """
-import asyncio
-import os
+import sys
+from pathlib import Path
 
-import aiohttp
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from custom_components.panasonic_aquarea.api.client import PanasonicCloudClient
+import asyncio  # noqa: E402
+import os  # noqa: E402
+
+import aiohttp  # noqa: E402
+
+from custom_components.panasonic_aquarea.api.client import PanasonicCloudClient  # noqa: E402
 
 
 async def main() -> None:
