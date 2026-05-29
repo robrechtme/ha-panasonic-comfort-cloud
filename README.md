@@ -14,17 +14,16 @@ break when community libraries fall behind Panasonic's API changes.
 
 | Platform | Entity |
 |---|---|
-| `climate` | One per absolute-temperature zone (on/off + setpoint; heat/cool follows the device mode) |
-| `select` | Operation mode (Off / Heat / Cool / Auto) — device-wide |
+| `climate` | One per absolute-temperature zone — mode (Off / Heat / Cool / Auto), setpoint (1° step); Auto uses a heat/cool range. Mode is device-wide. |
 | `water_heater` | DHW tank (target temperature + on/off) |
 | `number` | Compensation offset, one per offset-mode zone |
 | `switch` | Per offset-zone on/off, and Force DHW |
 | `sensor` | Outdoor temperature, pump duty, per-zone temperature, DHW tank temperature |
 | `binary_sensor` | Defrost active, fault |
 
-Zones are auto-detected: absolute-temperature zones become `climate` entities; compensation-offset
-zones become a `number` (the offset) plus an on/off `switch`. Operation mode is device-wide, so it's
-a single `select`. All entities group under one device per heat pump.
+Zones are auto-detected: absolute-temperature zones become `climate` entities (which also carry the
+device-wide operation mode); compensation-offset zones become a `number` (the offset) plus an on/off
+`switch`. All entities group under one device per heat pump.
 
 ## Installation (HACS — custom repository)
 
