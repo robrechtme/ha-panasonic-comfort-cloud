@@ -19,7 +19,7 @@ import aiohttp
 
 from . import const
 from .const import AQUAREA_DEVICE_TYPE
-from .models import AquareaDevice, UpdateOperationMode
+from .models import AquareaDevice, EnergyTotals, UpdateOperationMode
 from .signing import app_timestamp, cfc_key
 
 _LOGGER = logging.getLogger(__name__)
@@ -328,6 +328,21 @@ class PanasonicCloudClient:
 
     async def set_operation_mode(self, gwid: str, mode: UpdateOperationMode) -> None:
         await self._write({"gwid": gwid, "operationMode": int(mode)})
+
+    async def get_energy_today(self, gwid: str, date: str, tz_offset: str) -> EnergyTotals:
+        """Fetch today's consumption (hourly buckets) and return summed kWh totals.
+
+        date: 'YYYYMMDD' (device-local). tz_offset: e.g. '+02:00'.
+        """
+        data = await self._transfer(
+            {
+                "apiName": "/remote/v1/api/consumption",
+                "requestMethod": "POST",
+                "bodyParam": {"gwid": gwid, "dataMode": 0, "date": date, "osTimezone": tz_offset},
+            },
+            allow_refresh=True,
+        )
+        return EnergyTotals.from_consumption(data)
 
     async def ensure_session(self) -> None:
         """Make sure we have a usable access token + client id.

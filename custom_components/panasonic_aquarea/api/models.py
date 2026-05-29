@@ -128,3 +128,26 @@ class UpdateOperationMode(IntEnum):
     HEAT = 1
     COOL = 2
     AUTO = 3
+
+
+@dataclass(frozen=True)
+class EnergyTotals:
+    """Today's consumption (kWh) summed across hourly buckets."""
+
+    heating: float
+    cooling: float
+    hot_water: float
+    total: float
+
+    @classmethod
+    def from_consumption(cls, payload: dict) -> EnergyTotals:
+        buckets = payload.get("historyDataList", []) if isinstance(payload, dict) else []
+        heating = sum(b.get("heatConsumption") or 0 for b in buckets)
+        cooling = sum(b.get("coolConsumption") or 0 for b in buckets)
+        hot_water = sum(b.get("tankConsumption") or 0 for b in buckets)
+        return cls(
+            heating=round(heating, 3),
+            cooling=round(cooling, 3),
+            hot_water=round(hot_water, 3),
+            total=round(heating + cooling + hot_water, 3),
+        )
