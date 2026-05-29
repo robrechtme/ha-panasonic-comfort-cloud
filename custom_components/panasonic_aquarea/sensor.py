@@ -40,13 +40,6 @@ SENSORS: tuple[AquareaSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: d.pump_duty,
     ),
-    AquareaSensorDescription(
-        key="operation_mode",
-        translation_key="operation_mode",
-        device_class=SensorDeviceClass.ENUM,
-        options=["off", "heat", "cool", "auto", "dhw"],
-        value_fn=lambda d: d.operation_mode.name.lower(),
-    ),
 )
 
 
