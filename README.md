@@ -18,9 +18,9 @@ break when community libraries fall behind Panasonic's API changes.
 | `water_heater` | DHW tank (target temperature + on/off) |
 | `number` | Compensation offset, one per offset-mode zone |
 | `switch` | Per offset-zone on/off, and Force DHW |
-| `sensor` | Outdoor temperature, pump duty, per-zone temperature, DHW tank temperature |
+| `sensor` | Outdoor temperature, per-zone temperature, DHW tank temperature |
 | `sensor` (energy) | Daily Heating / Cooling / Hot water / Total energy (kWh) for the Energy dashboard |
-| `binary_sensor` | Defrost active, fault |
+| `binary_sensor` | Defrost active, fault, pump running |
 
 Zones are auto-detected: absolute-temperature zones become `climate` entities (which also carry the
 device-wide operation mode); compensation-offset zones become a `number` (the offset) plus an on/off
@@ -44,6 +44,12 @@ The four "energy today" sensors are `total_increasing` kWh and reset at midnight
 usage. Values come from Panasonic's hourly consumption history, so they lag by up to ~1 hour, and a
 category reads 0 until it's actually used (e.g. heating in summer). Requires a unit with energy
 metering.
+
+For accurate hour-by-hour attribution (matching against a smart meter, etc.), use the four
+external statistics instead — `panasonic_aquarea:<guid>_{heating,cooling,hot_water,total}_energy`,
+selectable as a separate consumption source in the Energy dashboard. These are backfilled directly
+from Panasonic's own per-hour buckets, so — unlike the polled sensors above — they don't misattribute
+consumption to the wrong hour.
 
 ### Manual installation
 
