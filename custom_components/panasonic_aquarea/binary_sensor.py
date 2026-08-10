@@ -35,6 +35,12 @@ BINARY_SENSORS: tuple[AquareaBinaryDescription, ...] = (
         device_class=BinarySensorDeviceClass.PROBLEM,
         value_fn=lambda d: d.fault,
     ),
+    AquareaBinaryDescription(
+        key="pump_duty",
+        translation_key="pump_duty",
+        device_class=BinarySensorDeviceClass.RUNNING,
+        value_fn=lambda d: bool(d.pump_duty),
+    ),
 )
 
 

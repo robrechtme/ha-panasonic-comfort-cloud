@@ -19,7 +19,6 @@
   "entity": {
     "sensor": {
       "outdoor_temperature": {"name": "Outdoor temperature"},
-      "pump_duty": {"name": "Pump duty"},
       "zone_temperature": {"name": "{zone} temperature"},
       "tank_temperature": {"name": "Tank temperature"},
       "energy_heating": {"name": "Heating energy today"},
@@ -29,7 +28,8 @@
     },
     "binary_sensor": {
       "defrost": {"name": "Defrost"},
-      "fault": {"name": "Fault"}
+      "fault": {"name": "Fault"},
+      "pump_duty": {"name": "Pump duty"}
     },
     "water_heater": {
       "tank": {"name": "Tank"}
