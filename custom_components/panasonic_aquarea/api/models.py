@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import IntEnum
 
 
@@ -151,3 +152,32 @@ class EnergyTotals:
             hot_water=round(hot_water, 3),
             total=round(heating + cooling + hot_water, 3),
         )
+
+
+@dataclass(frozen=True)
+class EnergyHourBucket:
+    """One hour of consumption, as Panasonic itself buckets it (device-local hour)."""
+
+    start: datetime
+    heating: float
+    cooling: float
+    hot_water: float
+
+    @property
+    def total(self) -> float:
+        return self.heating + self.cooling + self.hot_water
+
+    @classmethod
+    def from_dict(cls, d: dict, tzinfo: timezone) -> EnergyHourBucket:
+        return cls(
+            start=datetime.strptime(d["dataTime"], "%Y%m%d %H").replace(tzinfo=tzinfo),
+            heating=d.get("heatConsumption") or 0,
+            cooling=d.get("coolConsumption") or 0,
+            hot_water=d.get("tankConsumption") or 0,
+        )
+
+
+def parse_energy_history(payload: dict, tzinfo: timezone) -> list[EnergyHourBucket]:
+    """Parse the same consumption payload as `EnergyTotals`, keeping per-hour timestamps."""
+    buckets = payload.get("historyDataList", []) if isinstance(payload, dict) else []
+    return [EnergyHourBucket.from_dict(b, tzinfo) for b in buckets]

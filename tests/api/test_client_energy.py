@@ -1,9 +1,11 @@
+from datetime import timedelta
+
 import aiohttp
 import pytest
 from aioresponses import aioresponses
 
 from custom_components.panasonic_aquarea.api import const as c
-from custom_components.panasonic_aquarea.api.client import PanasonicCloudClient
+from custom_components.panasonic_aquarea.api.client import PanasonicCloudClient, _parse_tz_offset
 
 
 @pytest.fixture
@@ -51,3 +53,33 @@ async def test_get_energy_today_sums_buckets(client):
     assert totals.cooling == 0.12
     assert totals.hot_water == 0.2
     assert totals.total == 0.42
+
+
+async def test_get_energy_history_keeps_hourly_buckets(client):
+    payload = {
+        "historyDataList": [
+            {
+                "dataTime": "20260529 09",
+                "heatConsumption": 0,
+                "coolConsumption": 0.05,
+                "tankConsumption": 0,
+            },
+            {
+                "dataTime": "20260529 10",
+                "heatConsumption": 0.1,
+                "coolConsumption": 0.07,
+                "tankConsumption": 0.2,
+            },
+        ]
+    }
+    with aioresponses() as m:
+        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload=payload)
+        buckets = await client.get_energy_history("HP1", "20260529", "+02:00")
+    assert [b.start.hour for b in buckets] == [9, 10]
+    assert buckets[0].start.utcoffset().total_seconds() == 2 * 3600
+    assert buckets[1].total == 0.37
+
+
+def test_parse_tz_offset_positive_and_negative():
+    assert _parse_tz_offset("+02:00").utcoffset(None) == timedelta(hours=2)
+    assert _parse_tz_offset("-05:30").utcoffset(None) == timedelta(hours=-5, minutes=-30)

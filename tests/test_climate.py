@@ -19,6 +19,7 @@ async def _setup(hass, aquarea_status):
         client.get_devices = AsyncMock(return_value=[("HP1", "Warmtepomp")])
         client.get_status = AsyncMock(return_value=device)
         client.get_energy_today = AsyncMock(return_value=MagicMock())
+        client.get_energy_history = AsyncMock(return_value=[])
         client.set_zone_temperature = AsyncMock()
         client.set_zone_operation = AsyncMock()
         client.set_operation_mode = AsyncMock()

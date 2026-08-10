@@ -1,4 +1,12 @@
-from custom_components.panasonic_aquarea.api.models import AquareaDevice, OperationMode, ZoneMode
+
+from datetime import UTC
+
+from custom_components.panasonic_aquarea.api.models import (
+    AquareaDevice,
+    OperationMode,
+    ZoneMode,
+    parse_energy_history,
+)
 
 
 def test_parses_top_level(aquarea_status):
@@ -37,3 +45,33 @@ def test_parses_tank(aquarea_status):
     assert dev.tank.current_temperature == 46
     assert dev.tank.target_temperature == 52
     assert dev.tank.heat_min == 40 and dev.tank.heat_max == 65
+
+
+def test_parse_energy_history_keeps_hour_timestamps():
+    tz = UTC
+    payload = {
+        "historyDataList": [
+            {
+                "dataTime": "20260529 09",
+                "heatConsumption": 0,
+                "coolConsumption": 0.05,
+                "tankConsumption": 0,
+            },
+            {
+                "dataTime": "20260529 10",
+                "heatConsumption": 0.1,
+                "coolConsumption": 0.07,
+                "tankConsumption": 0.2,
+            },
+        ]
+    }
+    buckets = parse_energy_history(payload, tz)
+    assert [b.start.hour for b in buckets] == [9, 10]
+    assert buckets[0].total == 0.05
+    assert buckets[1].heating == 0.1 and buckets[1].cooling == 0.07 and buckets[1].hot_water == 0.2
+    assert buckets[1].total == 0.37
+    assert buckets[0].start.tzinfo is tz
+
+
+def test_parse_energy_history_empty_payload():
+    assert parse_energy_history({}, UTC) == []

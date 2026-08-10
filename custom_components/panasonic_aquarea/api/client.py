@@ -12,6 +12,7 @@ import logging
 import re
 import secrets
 from collections.abc import Awaitable, Callable
+from datetime import timedelta, timezone
 from html.parser import HTMLParser
 from urllib.parse import parse_qs, urlparse
 
@@ -19,12 +20,25 @@ import aiohttp
 
 from . import const
 from .const import AQUAREA_DEVICE_TYPE
-from .models import AquareaDevice, EnergyTotals, UpdateOperationMode
+from .models import (
+    AquareaDevice,
+    EnergyHourBucket,
+    EnergyTotals,
+    UpdateOperationMode,
+    parse_energy_history,
+)
 from .signing import app_timestamp, cfc_key
 
 _LOGGER = logging.getLogger(__name__)
 
 _VERSION_RE = re.compile(r'\["(\d+\.\d+\.\d+)"\]')
+
+
+def _parse_tz_offset(tz_offset: str) -> timezone:
+    """Parse a '+02:00'-style offset into a `timezone`."""
+    sign = -1 if tz_offset.startswith("-") else 1
+    hours, minutes = tz_offset.lstrip("+-").split(":")
+    return timezone(sign * timedelta(hours=int(hours), minutes=int(minutes)))
 
 
 class AuthError(Exception):
@@ -343,6 +357,24 @@ class PanasonicCloudClient:
             allow_refresh=True,
         )
         return EnergyTotals.from_consumption(data)
+
+    async def get_energy_history(
+        self, gwid: str, date: str, tz_offset: str
+    ) -> list[EnergyHourBucket]:
+        """Fetch today's consumption as Panasonic's own hour-bucketed series.
+
+        Same endpoint as `get_energy_today`, but keeps each bucket's own hour
+        timestamp instead of collapsing them into a single daily sum.
+        """
+        data = await self._transfer(
+            {
+                "apiName": "/remote/v1/api/consumption",
+                "requestMethod": "POST",
+                "bodyParam": {"gwid": gwid, "dataMode": 0, "date": date, "osTimezone": tz_offset},
+            },
+            allow_refresh=True,
+        )
+        return parse_energy_history(data, _parse_tz_offset(tz_offset))
 
     async def ensure_session(self) -> None:
         """Make sure we have a usable access token + client id.
