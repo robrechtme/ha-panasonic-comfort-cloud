@@ -71,3 +71,15 @@ async def test_climate_set_hvac_mode_drives_operation_mode(hass, aquarea_status)
         {"entity_id": "climate.warmtepomp_beneden", "hvac_mode": "heat"}, blocking=True,
     )
     client.set_operation_mode.assert_awaited_once_with("HP1", UpdateOperationMode.HEAT)
+
+
+async def test_climate_set_hvac_mode_skips_redundant_operation_mode_write(hass, aquarea_status):
+    # aquarea_status fixture device is already in Cool - live-verified that re-sending the
+    # mode the device is already in flips it to Heat instead of being a no-op.
+    _, client = await _setup(hass, aquarea_status)
+    client.set_zone_operation = AsyncMock()
+    await hass.services.async_call(
+        "climate", "set_hvac_mode",
+        {"entity_id": "climate.warmtepomp_beneden", "hvac_mode": "cool"}, blocking=True,
+    )
+    client.set_operation_mode.assert_not_awaited()
