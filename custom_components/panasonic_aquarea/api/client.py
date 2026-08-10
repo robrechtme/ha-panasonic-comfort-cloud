@@ -271,6 +271,7 @@ class PanasonicCloudClient:
         data = await self._transfer(body, allow_refresh=True)
         if "status" not in data:
             raise ApiError(f"unexpected transfer response: {data}")
+        _LOGGER.debug("raw status for %s: %s", guid, data["status"])
         return AquareaDevice.from_status(guid, data)
 
     async def _transfer(self, body: dict, *, allow_refresh: bool) -> dict:
@@ -313,6 +314,7 @@ class PanasonicCloudClient:
 
     async def _write(self, body_param: dict) -> dict:
         """POST a control write through the transfer proxy (retries once on 401)."""
+        _LOGGER.debug("write: %s", body_param)
         envelope = {
             "apiName": "/remote/v1/api/devices",
             "requestMethod": "POST",
