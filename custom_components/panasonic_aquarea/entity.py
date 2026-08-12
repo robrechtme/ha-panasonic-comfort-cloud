@@ -4,6 +4,7 @@ from __future__ import annotations
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .api.models import UpdateOperationMode
 from .const import DOMAIN
 from .coordinator import PanasonicAquareaCoordinator
 
@@ -35,7 +36,7 @@ class AquareaEntity(CoordinatorEntity[PanasonicAquareaCoordinator]):
     def _operation_bundle(
         self,
         *,
-        mode: int | None = None,
+        mode: UpdateOperationMode | None = None,
         zone_overrides: dict[int, bool] | None = None,
         tank_on: bool | None = None,
     ) -> tuple[int, list[tuple[int, bool]], bool]:
@@ -44,14 +45,19 @@ class AquareaEntity(CoordinatorEntity[PanasonicAquareaCoordinator]):
         Panasonic's API doesn't reliably honor a bare operationMode, zoneStatus,
         or tankStatus write in isolation - every zone's and the tank's current
         activation state needs echoing back alongside whatever's actually
-        changing, or the unit can end up in an unintended mode (live-verified: a
-        mode-only write for the mode the device was already in flipped it to
-        Heat unprompted). Mirrors aioaquarea's post_device_operation_update.
+        changing. Mirrors aioaquarea's post_device_operation_update.
+
+        When the mode isn't being changed it's echoed from the device's current
+        read-side mode, converted to the write enum - the two use different
+        numbering, so echoing the raw read value silently reselects the wrong
+        mode (live-verified: it flipped the unit to Heat).
         """
         device = self.device
         overrides = zone_overrides or {}
         zones = [(z.zone_id, overrides.get(z.zone_id, z.on)) for z in device.zones]
-        resolved_mode = int(mode) if mode is not None else int(device.operation_mode)
+        resolved_mode = int(
+            mode if mode is not None else UpdateOperationMode.from_read(device.operation_mode)
+        )
         resolved_tank_on = (
             tank_on if tank_on is not None else bool(device.tank and device.tank.on)
         )

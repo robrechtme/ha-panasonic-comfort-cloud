@@ -122,13 +122,30 @@ class AquareaDevice:
 class UpdateOperationMode(IntEnum):
     """Values accepted by the operationMode write.
 
-    DHW is excluded — it is not a settable whole-unit operation mode.
+    These deliberately differ from the read-side `OperationMode`: the Aquarea
+    write API uses its own numbering (HEAT=2/COOL=3/AUTO=8), verified against
+    aioaquarea and live behaviour. Sending a read-side value here silently
+    selects the wrong mode (e.g. read-COOL 2 == write-HEAT). DHW is excluded —
+    it is not a settable whole-unit operation mode.
     """
 
     OFF = 0
-    HEAT = 1
-    COOL = 2
-    AUTO = 3
+    HEAT = 2
+    COOL = 3
+    AUTO = 8
+
+    @classmethod
+    def from_read(cls, mode: OperationMode) -> UpdateOperationMode:
+        """Map a read-side OperationMode to the value the write API expects."""
+        return _READ_TO_UPDATE.get(mode, cls.OFF)
+
+
+_READ_TO_UPDATE = {
+    OperationMode.OFF: UpdateOperationMode.OFF,
+    OperationMode.HEAT: UpdateOperationMode.HEAT,
+    OperationMode.COOL: UpdateOperationMode.COOL,
+    OperationMode.AUTO: UpdateOperationMode.AUTO,
+}
 
 
 @dataclass(frozen=True)

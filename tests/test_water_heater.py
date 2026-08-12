@@ -69,5 +69,5 @@ async def test_tank_set_operation_mode_bundles_mode_and_zones(hass: HomeAssistan
         {"entity_id": "water_heater.warmtepomp_tank", "operation_mode": "off"},
         blocking=True,
     )
-    # mode/zones echoed as-is (device is Cool, Boven off, Beneden on), only tank changes
-    client.set_operation.assert_awaited_once_with("HP1", 2, [(1, False), (2, True)], tank_on=False)
+    # mode/zones echoed as-is (device is Cool -> write enum 3), only tank changes
+    client.set_operation.assert_awaited_once_with("HP1", 3, [(1, False), (2, True)], tank_on=False)

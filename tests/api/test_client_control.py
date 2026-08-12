@@ -66,7 +66,7 @@ async def test_set_operation_payload_bundles_mode_zones_and_tank(client):
         body = _last_transfer_body(m)
     assert body["bodyParam"] == {
         "gwid": "HP1",
-        "operationMode": 1,
+        "operationMode": 2,  # write enum: HEAT == 2 (not the read-side 1)
         "operationStatus": 1,
         "zoneStatus": [
             {"zoneId": 1, "operationStatus": 1},

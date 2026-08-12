@@ -4,9 +4,26 @@ from datetime import UTC
 from custom_components.panasonic_aquarea.api.models import (
     AquareaDevice,
     OperationMode,
+    UpdateOperationMode,
     ZoneMode,
     parse_energy_history,
 )
+
+
+def test_update_operation_mode_uses_write_enum_not_read_values():
+    # The write API numbers modes differently from the read side; sending a
+    # read value silently selects the wrong mode (read COOL 2 == write HEAT 2).
+    assert (UpdateOperationMode.OFF, UpdateOperationMode.HEAT,
+            UpdateOperationMode.COOL, UpdateOperationMode.AUTO) == (0, 2, 3, 8)
+
+
+def test_update_operation_mode_from_read_maps_across_enums():
+    assert UpdateOperationMode.from_read(OperationMode.HEAT) is UpdateOperationMode.HEAT
+    assert UpdateOperationMode.from_read(OperationMode.COOL) is UpdateOperationMode.COOL
+    assert UpdateOperationMode.from_read(OperationMode.AUTO) is UpdateOperationMode.AUTO
+    assert UpdateOperationMode.from_read(OperationMode.OFF) is UpdateOperationMode.OFF
+    # read COOL is 2, which must NOT be echoed as write 2 (that would be HEAT)
+    assert int(UpdateOperationMode.from_read(OperationMode.COOL)) == 3
 
 
 def test_parses_top_level(aquarea_status):

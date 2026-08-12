@@ -52,8 +52,8 @@ async def test_zone_switch_turn_on(hass: HomeAssistant, aquarea_status):
         "switch", "turn_on",
         {"entity_id": "switch.warmtepomp_boven"}, blocking=True,
     )
-    # Boven (zone 1) forced on, Beneden (zone 2) echoed as-is, mode/tank echoed
-    client.set_operation.assert_awaited_once_with("HP1", 2, [(1, True), (2, True)], tank_on=True)
+    # Boven (zone 1) forced on, Beneden (zone 2) echoed as-is, mode (Cool -> write 3)/tank echoed
+    client.set_operation.assert_awaited_once_with("HP1", 3, [(1, True), (2, True)], tank_on=True)
 
 
 async def test_force_dhw_switch_turn_on(hass: HomeAssistant, aquarea_status):
