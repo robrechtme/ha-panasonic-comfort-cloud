@@ -45,12 +45,12 @@ class AquareaZoneSwitch(AquareaEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs) -> None:
         mode, zones, tank_on = self._operation_bundle(zone_overrides={self._zone_id: True})
         await self.coordinator.client.set_operation(self._guid, mode, zones, tank_on=tank_on)
-        await self.coordinator.async_request_refresh()
+        self.coordinator.apply_optimistic(self._guid, zone_on={self._zone_id: True})
 
     async def async_turn_off(self, **kwargs) -> None:
         mode, zones, tank_on = self._operation_bundle(zone_overrides={self._zone_id: False})
         await self.coordinator.client.set_operation(self._guid, mode, zones, tank_on=tank_on)
-        await self.coordinator.async_request_refresh()
+        self.coordinator.apply_optimistic(self._guid, zone_on={self._zone_id: False})
 
 
 class AquareaForceDHWSwitch(AquareaEntity, SwitchEntity):
@@ -66,8 +66,8 @@ class AquareaForceDHWSwitch(AquareaEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs) -> None:
         await self.coordinator.client.set_force_dhw(self._guid, on=True)
-        await self.coordinator.async_request_refresh()
+        self.coordinator.apply_optimistic(self._guid, force_dhw=True)
 
     async def async_turn_off(self, **kwargs) -> None:
         await self.coordinator.client.set_force_dhw(self._guid, on=False)
-        await self.coordinator.async_request_refresh()
+        self.coordinator.apply_optimistic(self._guid, force_dhw=False)

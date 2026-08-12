@@ -87,3 +87,17 @@ async def test_climate_set_hvac_mode_to_current_mode_still_sends_full_bundle(has
     client.set_operation.assert_awaited_once_with(
         "HP1", UpdateOperationMode.COOL, [(1, False), (2, True)], tank_on=True
     )
+
+
+async def test_set_hvac_mode_updates_state_optimistically(hass, aquarea_status):
+    # The polled cloud status lags the device by ~30s, so the UI must reflect the
+    # change immediately from the optimistic push, without re-reading status.
+    _, client = await _setup(hass, aquarea_status)
+    assert hass.states.get("climate.warmtepomp_beneden").state == "cool"
+    await hass.services.async_call(
+        "climate", "set_hvac_mode",
+        {"entity_id": "climate.warmtepomp_beneden", "hvac_mode": "off"}, blocking=True,
+    )
+    assert hass.states.get("climate.warmtepomp_beneden").state == "off"
+    # only the first-refresh poll ran; no extra status read was triggered by the write
+    assert client.get_status.await_count == 1

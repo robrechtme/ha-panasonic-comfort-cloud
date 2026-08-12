@@ -27,6 +27,11 @@ _HVAC_TO_UPDATE = {
     HVACMode.COOL: UpdateOperationMode.COOL,
     HVACMode.AUTO: UpdateOperationMode.AUTO,
 }
+_HVAC_TO_MODE = {
+    HVACMode.HEAT: OperationMode.HEAT,
+    HVACMode.COOL: OperationMode.COOL,
+    HVACMode.AUTO: OperationMode.AUTO,
+}
 
 
 async def async_setup_entry(
@@ -147,12 +152,18 @@ class AquareaZoneClimate(AquareaEntity, ClimateEntity):
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         if hvac_mode == HVACMode.OFF:
             mode, zones, tank_on = self._operation_bundle(zone_overrides={self._zone_id: False})
+            await self.coordinator.client.set_operation(self._guid, mode, zones, tank_on=tank_on)
+            self.coordinator.apply_optimistic(self._guid, zone_on={self._zone_id: False})
         else:
             mode, zones, tank_on = self._operation_bundle(
                 mode=_HVAC_TO_UPDATE[hvac_mode], zone_overrides={self._zone_id: True}
             )
-        await self.coordinator.client.set_operation(self._guid, mode, zones, tank_on=tank_on)
-        await self.coordinator.async_request_refresh()
+            await self.coordinator.client.set_operation(self._guid, mode, zones, tank_on=tank_on)
+            self.coordinator.apply_optimistic(
+                self._guid,
+                operation_mode=_HVAC_TO_MODE[hvac_mode],
+                zone_on={self._zone_id: True},
+            )
 
     async def async_turn_on(self) -> None:
         await self.async_set_hvac_mode(_MODE_TO_HVAC.get(self._mode, HVACMode.HEAT))

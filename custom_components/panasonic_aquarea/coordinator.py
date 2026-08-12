@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import timedelta
 
 from homeassistant.components.recorder import get_instance
@@ -25,7 +26,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.util.unit_conversion import EnergyConverter
 
 from .api.client import ApiError, AuthError, PanasonicCloudClient
-from .api.models import AquareaDevice, EnergyHourBucket, EnergyTotals
+from .api.models import AquareaDevice, EnergyHourBucket, EnergyTotals, OperationMode
 from .const import (
     CONF_PASSWORD,
     CONF_REFRESH_TOKEN,
@@ -92,6 +93,42 @@ class PanasonicAquareaCoordinator(DataUpdateCoordinator[dict[str, AquareaDevice]
         if not result:
             raise UpdateFailed("No device data retrieved")
         return result
+
+    def apply_optimistic(
+        self,
+        guid: str,
+        *,
+        operation_mode: OperationMode | None = None,
+        zone_on: dict[int, bool] | None = None,
+        tank_on: bool | None = None,
+        force_dhw: bool | None = None,
+    ) -> None:
+        """Reflect a just-issued control write in state immediately.
+
+        The cloud status we poll lags the device by ~30s, so reading it right
+        after a write returns the pre-change state and the UI wouldn't update
+        until the next poll. Instead we push the expected state to all entities
+        now via async_set_updated_data; the next poll reconciles with reality
+        (and corrects us if a write silently failed).
+        """
+        device = self.data.get(guid) if self.data else None
+        if device is None:
+            return
+        changes: dict = {}
+        if operation_mode is not None:
+            changes["operation_mode"] = operation_mode
+        if zone_on:
+            changes["zones"] = tuple(
+                replace(z, on=zone_on[z.zone_id]) if z.zone_id in zone_on else z
+                for z in device.zones
+            )
+        if tank_on is not None and device.tank is not None:
+            changes["tank"] = replace(device.tank, on=tank_on)
+        if force_dhw is not None:
+            changes["force_dhw"] = force_dhw
+        if not changes:
+            return
+        self.async_set_updated_data({**self.data, guid: replace(device, **changes)})
 
 
 class PanasonicAquareaEnergyCoordinator(DataUpdateCoordinator[dict[str, EnergyTotals]]):

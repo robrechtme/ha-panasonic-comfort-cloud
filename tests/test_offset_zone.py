@@ -56,6 +56,17 @@ async def test_zone_switch_turn_on(hass: HomeAssistant, aquarea_status):
     client.set_operation.assert_awaited_once_with("HP1", 3, [(1, True), (2, True)], tank_on=True)
 
 
+async def test_zone_switch_updates_state_optimistically(hass: HomeAssistant, aquarea_status):
+    # Boven starts off in the fixture; turning it on must show immediately without a re-poll.
+    _, client = await _setup(hass, aquarea_status)
+    assert hass.states.get("switch.warmtepomp_boven").state == "off"
+    await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": "switch.warmtepomp_boven"}, blocking=True,
+    )
+    assert hass.states.get("switch.warmtepomp_boven").state == "on"
+    assert client.get_status.await_count == 1
+
+
 async def test_force_dhw_switch_turn_on(hass: HomeAssistant, aquarea_status):
     _, client = await _setup(hass, aquarea_status)
     await hass.services.async_call(
