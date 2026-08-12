@@ -145,17 +145,13 @@ class AquareaZoneClimate(AquareaEntity, ClimateEntity):
         await self.coordinator.async_request_refresh()
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        guid = self._guid
         if hvac_mode == HVACMode.OFF:
-            await self.coordinator.client.set_zone_operation(guid, self._zone_id, on=False)
+            mode, zones, tank_on = self._operation_bundle(zone_overrides={self._zone_id: False})
         else:
-            target_mode = _HVAC_TO_UPDATE[hvac_mode]
-            # Re-sending the mode the device is already in flips it to Heat instead
-            # of being a no-op (live-verified) - only write it when it's changing.
-            if self.device.operation_mode != target_mode:
-                await self.coordinator.client.set_operation_mode(guid, target_mode)
-            if not self._zone().on:
-                await self.coordinator.client.set_zone_operation(guid, self._zone_id, on=True)
+            mode, zones, tank_on = self._operation_bundle(
+                mode=_HVAC_TO_UPDATE[hvac_mode], zone_overrides={self._zone_id: True}
+            )
+        await self.coordinator.client.set_operation(self._guid, mode, zones, tank_on=tank_on)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_on(self) -> None:

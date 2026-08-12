@@ -21,7 +21,7 @@ async def _setup(hass, aquarea_status):
         client.get_energy_today = AsyncMock(return_value=MagicMock())
         client.get_energy_history = AsyncMock(return_value=[])
         client.set_zone_temperature = AsyncMock()
-        client.set_zone_operation = AsyncMock()
+        client.set_operation = AsyncMock()
         client.set_force_dhw = AsyncMock()
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -52,7 +52,8 @@ async def test_zone_switch_turn_on(hass: HomeAssistant, aquarea_status):
         "switch", "turn_on",
         {"entity_id": "switch.warmtepomp_boven"}, blocking=True,
     )
-    client.set_zone_operation.assert_awaited_once_with("HP1", 1, on=True)
+    # Boven (zone 1) forced on, Beneden (zone 2) echoed as-is, mode/tank echoed
+    client.set_operation.assert_awaited_once_with("HP1", 2, [(1, True), (2, True)], tank_on=True)
 
 
 async def test_force_dhw_switch_turn_on(hass: HomeAssistant, aquarea_status):

@@ -43,11 +43,13 @@ class AquareaZoneSwitch(AquareaEntity, SwitchEntity):
         return self._zone().on
 
     async def async_turn_on(self, **kwargs) -> None:
-        await self.coordinator.client.set_zone_operation(self._guid, self._zone_id, on=True)
+        mode, zones, tank_on = self._operation_bundle(zone_overrides={self._zone_id: True})
+        await self.coordinator.client.set_operation(self._guid, mode, zones, tank_on=tank_on)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs) -> None:
-        await self.coordinator.client.set_zone_operation(self._guid, self._zone_id, on=False)
+        mode, zones, tank_on = self._operation_bundle(zone_overrides={self._zone_id: False})
+        await self.coordinator.client.set_operation(self._guid, mode, zones, tank_on=tank_on)
         await self.coordinator.async_request_refresh()
 
 

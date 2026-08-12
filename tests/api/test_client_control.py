@@ -48,22 +48,6 @@ async def test_set_zone_cool_temperature_payload(client):
     assert body["bodyParam"] == {"gwid": "HP1", "zoneStatus": [{"zoneId": 2, "coolSet": 24}]}
 
 
-async def test_set_zone_operation_payload(client):
-    with aioresponses() as m:
-        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload={"result": 0})
-        await client.set_zone_operation("HP1", 1, on=False)
-        body = _last_transfer_body(m)
-    assert body["bodyParam"] == {"gwid": "HP1", "zoneStatus": [{"zoneId": 1, "operationStatus": 0}]}
-
-
-async def test_set_tank_operation_payload(client):
-    with aioresponses() as m:
-        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload={"result": 0})
-        await client.set_tank_operation("HP1", on=True)
-        body = _last_transfer_body(m)
-    assert body["bodyParam"] == {"gwid": "HP1", "tankStatus": {"operationStatus": 1}}
-
-
 async def test_set_force_dhw_payload(client):
     with aioresponses() as m:
         m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload={"result": 0})
@@ -72,10 +56,21 @@ async def test_set_force_dhw_payload(client):
     assert body["bodyParam"] == {"gwid": "HP1", "forceDHW": 1}
 
 
-async def test_set_operation_mode_payload(client):
+async def test_set_operation_payload_bundles_mode_zones_and_tank(client):
     from custom_components.panasonic_aquarea.api.models import UpdateOperationMode
     with aioresponses() as m:
         m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload={"result": 0})
-        await client.set_operation_mode("HP1", UpdateOperationMode.HEAT)
+        await client.set_operation(
+            "HP1", UpdateOperationMode.HEAT, [(1, True), (2, False)], tank_on=True
+        )
         body = _last_transfer_body(m)
-    assert body["bodyParam"] == {"gwid": "HP1", "operationMode": 1}
+    assert body["bodyParam"] == {
+        "gwid": "HP1",
+        "operationMode": 1,
+        "operationStatus": 1,
+        "zoneStatus": [
+            {"zoneId": 1, "operationStatus": 1},
+            {"zoneId": 2, "operationStatus": 0},
+        ],
+        "tankStatus": {"operationStatus": 1},
+    }

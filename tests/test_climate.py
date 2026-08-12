@@ -21,8 +21,7 @@ async def _setup(hass, aquarea_status):
         client.get_energy_today = AsyncMock(return_value=MagicMock())
         client.get_energy_history = AsyncMock(return_value=[])
         client.set_zone_temperature = AsyncMock()
-        client.set_zone_operation = AsyncMock()
-        client.set_operation_mode = AsyncMock()
+        client.set_operation = AsyncMock()
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
     return entry, client
@@ -62,24 +61,29 @@ async def test_climate_set_temperature_uses_cool_in_cool_mode(hass: HomeAssistan
     client.set_zone_temperature.assert_awaited_once_with("HP1", 2, 23, cooling=True)
 
 
-async def test_climate_set_hvac_mode_drives_operation_mode(hass, aquarea_status):
+async def test_climate_set_hvac_mode_bundles_mode_zones_and_tank(hass, aquarea_status):
     from custom_components.panasonic_aquarea.api.models import UpdateOperationMode
     _, client = await _setup(hass, aquarea_status)
-    client.set_zone_operation = AsyncMock()
     await hass.services.async_call(
         "climate", "set_hvac_mode",
         {"entity_id": "climate.warmtepomp_beneden", "hvac_mode": "heat"}, blocking=True,
     )
-    client.set_operation_mode.assert_awaited_once_with("HP1", UpdateOperationMode.HEAT)
+    # Boven (zone 1) echoed as-is (off), Beneden (zone 2) forced on, tank echoed (on)
+    client.set_operation.assert_awaited_once_with(
+        "HP1", UpdateOperationMode.HEAT, [(1, False), (2, True)], tank_on=True
+    )
 
 
-async def test_climate_set_hvac_mode_skips_redundant_operation_mode_write(hass, aquarea_status):
-    # aquarea_status fixture device is already in Cool - live-verified that re-sending the
-    # mode the device is already in flips it to Heat instead of being a no-op.
+async def test_climate_set_hvac_mode_to_current_mode_still_sends_full_bundle(hass, aquarea_status):
+    # aquarea_status fixture device is already in Cool - live-verified that a bare
+    # mode-only write for the mode the device is already in flips it to Heat, so the
+    # full bundle (mode + every zone + tank) must always be sent, never skipped.
+    from custom_components.panasonic_aquarea.api.models import UpdateOperationMode
     _, client = await _setup(hass, aquarea_status)
-    client.set_zone_operation = AsyncMock()
     await hass.services.async_call(
         "climate", "set_hvac_mode",
         {"entity_id": "climate.warmtepomp_beneden", "hvac_mode": "cool"}, blocking=True,
     )
-    client.set_operation_mode.assert_not_awaited()
+    client.set_operation.assert_awaited_once_with(
+        "HP1", UpdateOperationMode.COOL, [(1, False), (2, True)], tank_on=True
+    )

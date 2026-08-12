@@ -20,13 +20,7 @@ import aiohttp
 
 from . import const
 from .const import AQUAREA_DEVICE_TYPE
-from .models import (
-    AquareaDevice,
-    EnergyHourBucket,
-    EnergyTotals,
-    UpdateOperationMode,
-    parse_energy_history,
-)
+from .models import AquareaDevice, EnergyHourBucket, EnergyTotals, parse_energy_history
 from .signing import app_timestamp, cfc_key
 
 _LOGGER = logging.getLogger(__name__)
@@ -331,19 +325,32 @@ class PanasonicCloudClient:
         key = "coolSet" if cooling else "heatSet"
         await self._write({"gwid": gwid, "zoneStatus": [{"zoneId": zone_id, key: temperature}]})
 
-    async def set_zone_operation(self, gwid: str, zone_id: int, *, on: bool) -> None:
-        await self._write(
-            {"gwid": gwid, "zoneStatus": [{"zoneId": zone_id, "operationStatus": int(on)}]}
-        )
-
-    async def set_tank_operation(self, gwid: str, *, on: bool) -> None:
-        await self._write({"gwid": gwid, "tankStatus": {"operationStatus": int(on)}})
-
     async def set_force_dhw(self, gwid: str, *, on: bool) -> None:
         await self._write({"gwid": gwid, "forceDHW": int(on)})
 
-    async def set_operation_mode(self, gwid: str, mode: UpdateOperationMode) -> None:
-        await self._write({"gwid": gwid, "operationMode": int(mode)})
+    async def set_operation(
+        self, gwid: str, mode: int, zones: list[tuple[int, bool]], *, tank_on: bool
+    ) -> None:
+        """Change mode and/or zone/tank activation in one bundled write.
+
+        Panasonic's API doesn't reliably honor a bare operationMode, zoneStatus,
+        or tankStatus write in isolation - live-verified that a mode-only write
+        for the mode the device was already in flipped it to Heat unprompted.
+        Every zone's and the tank's current activation state must be echoed
+        back alongside whatever's actually changing. Mirrors aioaquarea's
+        post_device_operation_update.
+        """
+        await self._write(
+            {
+                "gwid": gwid,
+                "operationMode": int(mode),
+                "operationStatus": 1,
+                "zoneStatus": [
+                    {"zoneId": zone_id, "operationStatus": int(on)} for zone_id, on in zones
+                ],
+                "tankStatus": {"operationStatus": int(tank_on)},
+            }
+        )
 
     async def get_energy_today(self, gwid: str, date: str, tz_offset: str) -> EnergyTotals:
         """Fetch today's consumption (hourly buckets) and return summed kWh totals.

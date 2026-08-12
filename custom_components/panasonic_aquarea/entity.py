@@ -31,3 +31,28 @@ class AquareaEntity(CoordinatorEntity[PanasonicAquareaCoordinator]):
     @property
     def available(self) -> bool:
         return super().available and self._guid in self.coordinator.data
+
+    def _operation_bundle(
+        self,
+        *,
+        mode: int | None = None,
+        zone_overrides: dict[int, bool] | None = None,
+        tank_on: bool | None = None,
+    ) -> tuple[int, list[tuple[int, bool]], bool]:
+        """Build a full-bundle write from the device's current state, with overrides.
+
+        Panasonic's API doesn't reliably honor a bare operationMode, zoneStatus,
+        or tankStatus write in isolation - every zone's and the tank's current
+        activation state needs echoing back alongside whatever's actually
+        changing, or the unit can end up in an unintended mode (live-verified: a
+        mode-only write for the mode the device was already in flipped it to
+        Heat unprompted). Mirrors aioaquarea's post_device_operation_update.
+        """
+        device = self.device
+        overrides = zone_overrides or {}
+        zones = [(z.zone_id, overrides.get(z.zone_id, z.on)) for z in device.zones]
+        resolved_mode = int(mode) if mode is not None else int(device.operation_mode)
+        resolved_tank_on = (
+            tank_on if tank_on is not None else bool(device.tank and device.tank.on)
+        )
+        return resolved_mode, zones, resolved_tank_on

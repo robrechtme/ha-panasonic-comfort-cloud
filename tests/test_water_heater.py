@@ -24,7 +24,7 @@ async def _setup(hass, aquarea_status):
         client.get_energy_today = AsyncMock(return_value=MagicMock())
         client.get_energy_history = AsyncMock(return_value=[])
         client.set_tank_temperature = AsyncMock()
-        client.set_tank_operation = AsyncMock()
+        client.set_operation = AsyncMock()
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
     return entry, client
@@ -59,3 +59,15 @@ async def test_tank_set_temperature_out_of_range_rejected(hass: HomeAssistant, a
             blocking=True,
         )
     client.set_tank_temperature.assert_not_awaited()
+
+
+async def test_tank_set_operation_mode_bundles_mode_and_zones(hass: HomeAssistant, aquarea_status):
+    _, client = await _setup(hass, aquarea_status)
+    await hass.services.async_call(
+        "water_heater",
+        "set_operation_mode",
+        {"entity_id": "water_heater.warmtepomp_tank", "operation_mode": "off"},
+        blocking=True,
+    )
+    # mode/zones echoed as-is (device is Cool, Boven off, Beneden on), only tank changes
+    client.set_operation.assert_awaited_once_with("HP1", 2, [(1, False), (2, True)], tank_on=False)

@@ -72,7 +72,8 @@ class AquareaTank(AquareaEntity, WaterHeaterEntity):
         await self.coordinator.async_request_refresh()
 
     async def async_set_operation_mode(self, operation_mode: str) -> None:
-        await self.coordinator.client.set_tank_operation(
-            self._guid, on=operation_mode == STATE_PERFORMANCE
+        mode, zones, tank_on = self._operation_bundle(
+            tank_on=operation_mode == STATE_PERFORMANCE
         )
+        await self.coordinator.client.set_operation(self._guid, mode, zones, tank_on=tank_on)
         await self.coordinator.async_request_refresh()
