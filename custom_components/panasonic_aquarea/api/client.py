@@ -106,8 +106,10 @@ class PanasonicCloudClient:
             match = _VERSION_RE.search(text)
             if match:
                 return match.group(1)
+            _LOGGER.warning("App version not found on the Play Store page")
         except aiohttp.ClientError as err:
-            _LOGGER.debug("App version fetch failed: %s", err)
+            _LOGGER.warning("App version fetch failed: %s", err)
+        _LOGGER.warning("Using fallback app version %s", const.APP_VERSION_FALLBACK)
         return const.APP_VERSION_FALLBACK
 
     @staticmethod
@@ -234,7 +236,9 @@ class PanasonicCloudClient:
         ) as resp:
             data = await resp.json()
         if "clientId" not in data:
-            raise AuthError("client id resolution failed")
+            raise AuthError(
+                f"client id resolution failed (app version {self._app_version}): {data}"
+            )
         self._client_id = data["clientId"]
 
     async def get_devices(self) -> list[tuple[str, str]]:

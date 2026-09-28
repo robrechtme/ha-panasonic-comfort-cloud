@@ -14,7 +14,7 @@ SCOPE = "openid offline_access comfortcloud.control a2w.control"
 # Comfort Cloud API
 API_BASE = "https://accsmart.panasonic.com"
 FIXED_KEY = "521325fb2dd486bf4831b47644317fca"
-APP_VERSION_FALLBACK = "4.3.0"
+APP_VERSION_FALLBACK = "4.4.0"
 PLAY_STORE_URL = (
     "https://play.google.com/store/apps/details?id=com.panasonic.ACCsmart&hl=en"
 )

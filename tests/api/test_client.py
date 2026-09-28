@@ -42,6 +42,14 @@ async def test_fetch_app_version_falls_back_on_error(session):
     assert version == APP_VERSION_FALLBACK
 
 
+async def test_resolve_client_id_error_includes_reply(session):
+    client = PanasonicCloudClient(session, "user", "pass")
+    with aioresponses() as m:
+        m.post(f"{c.API_BASE}/auth/v2/login", status=200, payload={"code": 4106})
+        with pytest.raises(AuthError, match=r"app version .*4106"):
+            await client._resolve_client_id()
+
+
 async def test_login_full_flow(session):
     client = PanasonicCloudClient(session, "user", "pass")
     with aioresponses() as m:
