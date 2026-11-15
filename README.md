@@ -18,7 +18,7 @@ break when community libraries fall behind Panasonic's API changes.
 | `water_heater` | DHW tank (target temperature + on/off) |
 | `number` | Compensation offset, one per offset-mode zone |
 | `switch` | Per offset-zone on/off, and Force DHW |
-| `sensor` | Outdoor temperature, per-zone temperature, DHW tank temperature |
+| `sensor` | Activity (idle / heating / cooling / hot water), outdoor temperature, per-zone temperature, DHW tank temperature |
 | `sensor` (energy) | Daily Heating / Cooling / Hot water / Total energy (kWh) for the Energy dashboard |
 | `binary_sensor` | Defrost active, fault, pump running |
 
