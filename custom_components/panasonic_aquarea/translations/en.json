@@ -19,6 +19,15 @@
   "entity": {
     "sensor": {
       "outdoor_temperature": {"name": "Outdoor temperature"},
+      "activity": {
+        "name": "Activity",
+        "state": {
+          "idle": "Idle",
+          "heating": "Heating",
+          "cooling": "Cooling",
+          "hot_water": "Hot water"
+        }
+      },
       "zone_temperature": {"name": "{zone} temperature"},
       "tank_temperature": {"name": "Tank temperature"},
       "energy_heating": {"name": "Heating energy today"},

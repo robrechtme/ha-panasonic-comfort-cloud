@@ -21,6 +21,23 @@ class OperationMode(IntEnum):
             return cls.OFF
 
 
+class Direction(IntEnum):
+    """Where the heat pump sends its output right now."""
+
+    IDLE = 0
+    SPACE = 1
+    WATER = 2
+
+
+class Activity:
+    IDLE = "idle"
+    HEATING = "heating"
+    COOLING = "cooling"
+    HOT_WATER = "hot_water"
+
+    OPTIONS = [IDLE, HEATING, COOLING, HOT_WATER]
+
+
 class ZoneMode(IntEnum):
     """Whether a zone's setpoint is an absolute room temp or a compensation offset."""
 
@@ -95,6 +112,7 @@ class AquareaDevice:
     defrost: bool
     fault: bool
     force_dhw: bool
+    direction: int
     zones: tuple[Zone, ...]
     tank: Tank | None
 
@@ -114,9 +132,23 @@ class AquareaDevice:
             defrost=bool(status.get("deiceStatus", 0)),
             fault=bool(status.get("specialStatus", 0)),
             force_dhw=bool(status.get("forceDHW", 0)),
+            direction=status.get("direction", Direction.IDLE),
             zones=tuple(Zone.from_dict(z) for z in status.get("zoneStatus", [])),
             tank=Tank.from_dict(tank_raw) if tank_raw else None,
         )
+
+    @property
+    def activity(self) -> str | None:
+        """What the unit is doing now, as shown in the Panasonic app."""
+        if self.direction == Direction.IDLE:
+            return Activity.IDLE
+        if self.direction == Direction.WATER:
+            return Activity.HOT_WATER
+        if self.direction == Direction.SPACE:
+            if self.operation_mode == OperationMode.COOL:
+                return Activity.COOLING
+            return Activity.HEATING
+        return None
 
 
 class UpdateOperationMode(IntEnum):

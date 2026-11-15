@@ -17,7 +17,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import PanasonicAquareaConfigEntry
-from .api.models import AquareaDevice
+from .api.models import Activity, AquareaDevice
 from .const import DOMAIN
 from .entity import AquareaEntity
 
@@ -43,6 +43,13 @@ SENSORS: tuple[AquareaSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: d.outdoor_temperature,
+    ),
+    AquareaSensorDescription(
+        key="activity",
+        translation_key="activity",
+        device_class=SensorDeviceClass.ENUM,
+        options=Activity.OPTIONS,
+        value_fn=lambda d: d.activity,
     ),
 )
 
