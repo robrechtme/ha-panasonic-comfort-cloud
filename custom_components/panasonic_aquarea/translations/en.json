@@ -19,6 +19,7 @@
   "entity": {
     "sensor": {
       "outdoor_temperature": {"name": "Outdoor temperature"},
+      "water_pressure": {"name": "Water pressure"},
       "activity": {
         "name": "Activity",
         "state": {
