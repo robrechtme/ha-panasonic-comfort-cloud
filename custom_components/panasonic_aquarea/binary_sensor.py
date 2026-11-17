@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -20,6 +21,7 @@ from .entity import AquareaEntity
 @dataclass(frozen=True, kw_only=True)
 class AquareaBinaryDescription(BinarySensorEntityDescription):
     value_fn: Callable[[AquareaDevice], bool]
+    attrs_fn: Callable[[AquareaDevice], dict[str, Any]] | None = None
 
 
 BINARY_SENSORS: tuple[AquareaBinaryDescription, ...] = (
@@ -34,6 +36,10 @@ BINARY_SENSORS: tuple[AquareaBinaryDescription, ...] = (
         translation_key="fault",
         device_class=BinarySensorDeviceClass.PROBLEM,
         value_fn=lambda d: d.fault,
+        attrs_fn=lambda d: {
+            "error_codes": [f.code for f in d.faults],
+            "error_messages": [f.message for f in d.faults],
+        },
     ),
     AquareaBinaryDescription(
         key="pump_duty",
@@ -68,3 +74,8 @@ class AquareaBinarySensor(AquareaEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         return self.entity_description.value_fn(self.device)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        attrs_fn = self.entity_description.attrs_fn
+        return attrs_fn(self.device) if attrs_fn else None

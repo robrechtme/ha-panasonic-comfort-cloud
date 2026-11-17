@@ -37,6 +37,18 @@ def test_parses_top_level(aquarea_status):
     assert dev.pump_duty == 0
     assert dev.defrost is False
     assert dev.fault is False
+    assert dev.faults == ()
+
+
+def test_fault_comes_from_fault_status_not_special_status(aquarea_status):
+    aquarea_status["status"]["specialStatus"] = 1
+    assert AquareaDevice.from_status("HP1", aquarea_status).fault is False
+    aquarea_status["status"]["faultStatus"] = [
+        {"errorCode": "H23", "errorMessage": "Refrigerant sensor abnormality"}
+    ]
+    dev = AquareaDevice.from_status("HP1", aquarea_status)
+    assert dev.fault is True
+    assert dev.faults[0].code == "H23"
     assert dev.force_dhw is False
 
 

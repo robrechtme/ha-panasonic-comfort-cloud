@@ -117,6 +117,16 @@ class Tank:
 
 
 @dataclass(frozen=True)
+class Fault:
+    code: str
+    message: str
+
+    @classmethod
+    def from_dict(cls, d: dict) -> Fault:
+        return cls(code=d.get("errorCode", ""), message=d.get("errorMessage", ""))
+
+
+@dataclass(frozen=True)
 class AquareaDevice:
     guid: str
     name: str
@@ -126,7 +136,7 @@ class AquareaDevice:
     water_pressure: float
     pump_duty: int
     defrost: bool
-    fault: bool
+    faults: tuple[Fault, ...]
     force_dhw: bool
     quiet_mode: QuietMode
     direction: int
@@ -147,13 +157,17 @@ class AquareaDevice:
             water_pressure=status.get("waterPressure"),
             pump_duty=status.get("pumpDuty", 0),
             defrost=bool(status.get("deiceStatus", 0)),
-            fault=bool(status.get("specialStatus", 0)),
+            faults=tuple(Fault.from_dict(f) for f in status.get("faultStatus") or []),
             force_dhw=bool(status.get("forceDHW", 0)),
             quiet_mode=QuietMode.parse(status.get("quietMode", 0)),
             direction=status.get("direction", Direction.IDLE),
             zones=tuple(Zone.from_dict(z) for z in status.get("zoneStatus", [])),
             tank=Tank.from_dict(tank_raw) if tank_raw else None,
         )
+
+    @property
+    def fault(self) -> bool:
+        return bool(self.faults)
 
     @property
     def activity(self) -> str | None:

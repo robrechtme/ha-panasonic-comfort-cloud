@@ -43,3 +43,27 @@ async def test_pump_duty_on_when_nonzero(hass: HomeAssistant, aquarea_status):
 async def test_no_pump_duty_percentage_sensor(hass: HomeAssistant, aquarea_status):
     await _setup(hass, aquarea_status)
     assert hass.states.get("sensor.warmtepomp_pump_duty") is None
+
+
+async def test_fault_off_for_eco_comfort_special_status(hass: HomeAssistant, aquarea_status):
+    aquarea_status["status"]["specialStatus"] = 2
+    await _setup(hass, aquarea_status)
+    assert hass.states.get("binary_sensor.warmtepomp_fault").state == "off"
+
+
+async def test_fault_on_with_error_codes(hass: HomeAssistant, aquarea_status):
+    aquarea_status["status"]["faultStatus"] = [
+        {"errorCode": "H23", "errorMessage": "Refrigerant sensor abnormality"}
+    ]
+    await _setup(hass, aquarea_status)
+    state = hass.states.get("binary_sensor.warmtepomp_fault")
+    assert state.state == "on"
+    assert state.attributes["error_codes"] == ["H23"]
+    assert state.attributes["error_messages"] == ["Refrigerant sensor abnormality"]
+
+
+async def test_water_pressure_sensor(hass: HomeAssistant, aquarea_status):
+    await _setup(hass, aquarea_status)
+    state = hass.states.get("sensor.warmtepomp_water_pressure")
+    assert float(state.state) == 1.32
+    assert state.attributes["unit_of_measurement"] == "bar"
