@@ -2,7 +2,7 @@
 
 A self-contained Home Assistant custom integration for **Panasonic Aquarea** air-to-water heat
 pumps, via Panasonic Comfort Cloud. Reads live status (zones, DHW tank, outdoor temperature, pump
-duty, defrost, fault) and exposes it as Home Assistant entities.
+duty, water pressure, defrost, fault) and exposes it as Home Assistant entities.
 
 It talks to Comfort Cloud directly through the app's proxy endpoint — **no dependency on any
 third-party Panasonic library** (stdlib + Home Assistant's bundled `aiohttp` only), so it doesn't
@@ -19,9 +19,9 @@ break when community libraries fall behind Panasonic's API changes.
 | `number` | Compensation offset, one per offset-mode zone |
 | `switch` | Per offset-zone on/off, and Force DHW |
 | `select` | Quiet mode (Off / Level 1–3) — lowers fan noise at the cost of some capacity |
-| `sensor` | Activity (idle / heating / cooling / hot water), outdoor temperature, per-zone temperature, DHW tank temperature |
+| `sensor` | Activity (idle / heating / cooling / hot water), outdoor temperature, water pressure (bar), per-zone temperature, DHW tank temperature |
 | `sensor` (energy) | Daily Heating / Cooling / Hot water / Total energy (kWh) for the Energy dashboard |
-| `binary_sensor` | Defrost active, fault, pump running |
+| `binary_sensor` | Defrost active, fault (error codes as attributes), pump running |
 
 Zones are auto-detected: absolute-temperature zones become `climate` entities (which also carry the
 device-wide operation mode); compensation-offset zones become a `number` (the offset) plus an on/off
