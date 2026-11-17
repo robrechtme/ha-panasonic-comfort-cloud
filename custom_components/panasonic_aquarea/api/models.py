@@ -38,6 +38,22 @@ class Activity:
     OPTIONS = [IDLE, HEATING, COOLING, HOT_WATER]
 
 
+class QuietMode(IntEnum):
+    """Fan-noise reduction level. Read and write use the same numbering."""
+
+    OFF = 0
+    LEVEL_1 = 1
+    LEVEL_2 = 2
+    LEVEL_3 = 3
+
+    @classmethod
+    def parse(cls, value: int) -> QuietMode:
+        try:
+            return cls(value)
+        except ValueError:
+            return cls.OFF
+
+
 class ZoneMode(IntEnum):
     """Whether a zone's setpoint is an absolute room temp or a compensation offset."""
 
@@ -112,6 +128,7 @@ class AquareaDevice:
     defrost: bool
     fault: bool
     force_dhw: bool
+    quiet_mode: QuietMode
     direction: int
     zones: tuple[Zone, ...]
     tank: Tank | None
@@ -132,6 +149,7 @@ class AquareaDevice:
             defrost=bool(status.get("deiceStatus", 0)),
             fault=bool(status.get("specialStatus", 0)),
             force_dhw=bool(status.get("forceDHW", 0)),
+            quiet_mode=QuietMode.parse(status.get("quietMode", 0)),
             direction=status.get("direction", Direction.IDLE),
             zones=tuple(Zone.from_dict(z) for z in status.get("zoneStatus", [])),
             tank=Tank.from_dict(tank_raw) if tank_raw else None,

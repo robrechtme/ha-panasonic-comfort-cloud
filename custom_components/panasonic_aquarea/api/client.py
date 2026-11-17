@@ -20,7 +20,13 @@ import aiohttp
 
 from . import const
 from .const import AQUAREA_DEVICE_TYPE
-from .models import AquareaDevice, EnergyHourBucket, EnergyTotals, parse_energy_history
+from .models import (
+    AquareaDevice,
+    EnergyHourBucket,
+    EnergyTotals,
+    QuietMode,
+    parse_energy_history,
+)
 from .signing import app_timestamp, cfc_key
 
 _LOGGER = logging.getLogger(__name__)
@@ -331,6 +337,9 @@ class PanasonicCloudClient:
 
     async def set_force_dhw(self, gwid: str, *, on: bool) -> None:
         await self._write({"gwid": gwid, "forceDHW": int(on)})
+
+    async def set_quiet_mode(self, gwid: str, mode: QuietMode) -> None:
+        await self._write({"gwid": gwid, "quietMode": int(mode)})
 
     async def set_operation(
         self, gwid: str, mode: int, zones: list[tuple[int, bool]], *, tank_on: bool

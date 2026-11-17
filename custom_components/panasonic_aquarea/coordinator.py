@@ -26,7 +26,13 @@ from homeassistant.util import dt as dt_util
 from homeassistant.util.unit_conversion import EnergyConverter
 
 from .api.client import ApiError, AuthError, PanasonicCloudClient
-from .api.models import AquareaDevice, EnergyHourBucket, EnergyTotals, OperationMode
+from .api.models import (
+    AquareaDevice,
+    EnergyHourBucket,
+    EnergyTotals,
+    OperationMode,
+    QuietMode,
+)
 from .const import (
     CONF_PASSWORD,
     CONF_REFRESH_TOKEN,
@@ -102,6 +108,7 @@ class PanasonicAquareaCoordinator(DataUpdateCoordinator[dict[str, AquareaDevice]
         zone_on: dict[int, bool] | None = None,
         tank_on: bool | None = None,
         force_dhw: bool | None = None,
+        quiet_mode: QuietMode | None = None,
     ) -> None:
         """Reflect a just-issued control write in state immediately.
 
@@ -126,6 +133,8 @@ class PanasonicAquareaCoordinator(DataUpdateCoordinator[dict[str, AquareaDevice]
             changes["tank"] = replace(device.tank, on=tank_on)
         if force_dhw is not None:
             changes["force_dhw"] = force_dhw
+        if quiet_mode is not None:
+            changes["quiet_mode"] = quiet_mode
         if not changes:
             return
         self.async_set_updated_data({**self.data, guid: replace(device, **changes)})

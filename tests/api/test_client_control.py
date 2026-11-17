@@ -74,3 +74,13 @@ async def test_set_operation_payload_bundles_mode_zones_and_tank(client):
         ],
         "tankStatus": {"operationStatus": 1},
     }
+
+
+async def test_set_quiet_mode_payload(client):
+    from custom_components.panasonic_aquarea.api.models import QuietMode
+
+    with aioresponses() as m:
+        m.post(f"{c.API_BASE}/remote/v1/app/common/transfer", status=200, payload={"result": 0})
+        await client.set_quiet_mode("HP1", QuietMode.LEVEL_2)
+        body = _last_transfer_body(m)
+    assert body["bodyParam"] == {"gwid": "HP1", "quietMode": 2}
