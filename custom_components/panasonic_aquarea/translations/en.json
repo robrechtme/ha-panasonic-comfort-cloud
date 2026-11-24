@@ -26,7 +26,8 @@
           "idle": "Idle",
           "heating": "Heating",
           "cooling": "Cooling",
-          "hot_water": "Hot water"
+          "hot_water": "Hot water",
+          "defrosting": "Defrosting"
         }
       },
       "zone_temperature": {"name": "{zone} temperature"},

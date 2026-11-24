@@ -34,8 +34,9 @@ class Activity:
     HEATING = "heating"
     COOLING = "cooling"
     HOT_WATER = "hot_water"
+    DEFROSTING = "defrosting"
 
-    OPTIONS = [IDLE, HEATING, COOLING, HOT_WATER]
+    OPTIONS = [IDLE, HEATING, COOLING, HOT_WATER, DEFROSTING]
 
 
 class QuietMode(IntEnum):
@@ -171,7 +172,13 @@ class AquareaDevice:
 
     @property
     def activity(self) -> str | None:
-        """What the unit is doing now, as shown in the Panasonic app."""
+        """What the unit is doing now, as shown in the Panasonic app.
+
+        Defrost wins over direction: the unit keeps reporting its normal
+        direction while it runs in reverse to melt ice on the outdoor coil.
+        """
+        if self.defrost:
+            return Activity.DEFROSTING
         if self.direction == Direction.IDLE:
             return Activity.IDLE
         if self.direction == Direction.WATER:
